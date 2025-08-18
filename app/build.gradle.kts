@@ -44,15 +44,20 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.documentfile)
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.ui.test.junit4)
@@ -113,4 +118,30 @@ afterEvaluate {
             dependsOn(downloadTask)
         }
     }
+}
+
+val pullAppPrivateFiles = tasks.register<Exec>("pullAppPrivateFiles") {
+    group = "debug"
+    description = "Pull DataStore files from emulator to project dir"
+
+    // 包名
+    val packageName = android.namespace
+    val targetDir = "${projectDir}/build"
+    try {
+        exec {
+            commandLine(
+                "adb", "shell", "run-as", packageName,
+                "cp", "-r", ".", "/sdcard/${packageName}"
+            )
+        }
+    } catch (e: Exception) {}
+
+    try {
+        exec {
+            commandLine(
+                "adb", "pull", "/sdcard/${packageName}", targetDir
+            )
+        }
+    } catch (e: Exception) {}
+
 }

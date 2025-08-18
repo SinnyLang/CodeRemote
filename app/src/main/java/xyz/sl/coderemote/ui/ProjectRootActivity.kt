@@ -1,7 +1,10 @@
 package xyz.sl.coderemote.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
@@ -25,23 +28,48 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.launch
+import xyz.sl.coderemote.utils.UriUtils.uriToFileNode
 
 class ProjectRootActivity : ComponentActivity() {
+    val debugTag : String = "ProjectRootActivity"
+
+    private var projectFileRoot: List<FileNode> = listOf()
+    private var uri : Uri = Uri.EMPTY
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val uriStr = intent.getStringExtra("uri")
+        uri =  Uri.parse(uriStr)
+        try {
+            projectFileRoot = listOf(
+                uriToFileNode(this, uri)
+            )
+        } catch (e: IllegalArgumentException) {
+            Log.e(debugTag, "解析uri失败 返回null", e)
+            Toast.makeText(this, "目录或文件不存在", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, StartProjectActivity::class.java))
+            finish()
+        }
+
+        // TODO: avoid uri is null in StartProjectActivity
+        Log.i("ProjectRootActivity","uri"+uri.toString())
+
         setContent {
-            UiProjectRoot()
+            UiProjectRoot(projectFileRoot)
         }
     }
 }
 
 @Composable
-fun UiProjectRoot() {
+fun UiProjectRoot(projectFileRoot: List<FileNode> = listOf()) {
+    val context = LocalContext.current
     val expandDrawer = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -59,19 +87,6 @@ fun UiProjectRoot() {
         OptionItem("新建") {},
         OptionItem("保存") {},
         OptionItem("打开") {}
-    )
-
-    val projectFileRoot = listOf(
-        FileNode.Directory("src", listOf(
-            FileNode.Directory("main", listOf(
-                FileNode.File("MainActivity.kt"),
-                FileNode.File("Utils.kt")
-            )),
-            FileNode.Directory("test", listOf(
-                FileNode.File("MainActivityTest.kt")
-            ))
-        )),
-        FileNode.File("README.md")
     )
 
 //    val imeBottomDp = with(LocalDensity.current) { WindowInsets.ime.getBottom(this).toDp() }
@@ -156,7 +171,7 @@ fun UiProjectRoot() {
 
             UiOutputPanel(tabTitles = tabs, tabContents = contents,
                 modifier = Modifier
-                .fillMaxWidth()
+                    .fillMaxWidth()
 //                .align(Alignment.BottomCenter)
                 .zIndex(1f) // 保证浮在上面
             )
@@ -181,5 +196,17 @@ fun UiProjectRoot() {
 @Preview(backgroundColor = 0x888888)
 @Composable
 fun PreviewUiProjectRoot() {
-    UiProjectRoot()
+    val sampleData = listOf(
+        FileNode.Directory("src",listOf(
+            FileNode.Directory("main",listOf(
+                FileNode.File("MainActivity.kt"),
+                FileNode.File("Utils.kt")
+            )),
+            FileNode.Directory("test", listOf(
+                FileNode.File("MainActivityTest.kt")
+            ))
+        )),
+        FileNode.File("README.md")
+    )
+    UiProjectRoot(sampleData)
 }
