@@ -44,11 +44,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.documentfile.provider.DocumentFile
 
 import xyz.sl.coderemote.ui.theme.TextEditorComposeTheme
+import java.io.File
 import kotlin.math.log10
 
 class EditorActivity : ComponentActivity() {
@@ -115,11 +118,15 @@ data class OptionItem(val text: String, val action: () -> Unit)
 @Composable
 fun UiEditor(
     text: String,
+    fileUri: Uri = Uri.EMPTY,
     onTextChange: (String) -> Unit,
     tasksData: List<OptionItem> = listOf(),
     menusData: List<OptionItem> = listOf(),
     modifier: Modifier = Modifier
 ) {
+    var context = LocalContext.current
+    var file = DocumentFile.fromSingleUri(context, fileUri)
+        ?: DocumentFile.fromFile(File("UnknownFile"))
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -146,7 +153,7 @@ fun UiEditor(
             Column {
                 // 当前文件名标注
                 Text(
-                    text = "abc.class",
+                    text = file.name?: "UnknownFile",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier

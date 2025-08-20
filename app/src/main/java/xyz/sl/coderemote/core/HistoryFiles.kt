@@ -14,10 +14,10 @@ interface HistoryFilesStorage {
 }
 
 
-val Context.dataStore by preferencesDataStore("recent_files")
+val Context.dataStore by preferencesDataStore("history_files")
 
 class DataStoreHistoryFiles(private val context: Context) : HistoryFilesStorage {
-    private val RECENT_FILES_KEY = stringSetPreferencesKey("recent_files")
+    private val RECENT_FILES_KEY = stringSetPreferencesKey("history_files")
 
     override suspend fun addUri(uri: Uri) {
         context.dataStore.edit { prefs ->

@@ -37,7 +37,7 @@ class UriUtilsTest {
         every { folder.listFiles() } returns arrayOf(folder1, file1, file2)
 
         // 调用转换函数
-        val node = documentFileToNode(folder, mockk())
+        val node = documentFileToNode(folder, null, mockk())
 
         assertEquals("root", node.name)
         val dir = node as FileNode.Directory
@@ -46,5 +46,6 @@ class UriUtilsTest {
         assertEquals("dir1", dir.children[0].name)
         assert(dir.children[1] is FileNode.File)
         assertEquals("file1.txt", dir.children[1].name)
+        assertEquals("root", dir.children[0].parent?.name)
     }
 }

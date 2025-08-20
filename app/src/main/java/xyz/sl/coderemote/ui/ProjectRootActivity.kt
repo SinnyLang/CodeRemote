@@ -7,6 +7,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,23 +25,31 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import xyz.sl.coderemote.utils.UriUtils.findFileUri
 import xyz.sl.coderemote.utils.UriUtils.uriToFileNode
 
 class ProjectRootActivity : ComponentActivity() {
-    val debugTag : String = "ProjectRootActivity"
+    var debugTag : String = "ProjectRootActivity"
 
     private var projectFileRoot: List<FileNode> = listOf()
     private var uri : Uri = Uri.EMPTY
+
+    private val vm : ProjectRootViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,19 +68,52 @@ class ProjectRootActivity : ComponentActivity() {
         }
 
         // TODO: avoid uri is null in StartProjectActivity
-        Log.i("ProjectRootActivity","uri"+uri.toString())
+        Log.i(debugTag,"uri"+uri.toString())
+
+        val onDrawerFileItemClick = { node: FileNode ->
+            Log.i(debugTag, "onDrawerFileItemClick()->${node.name}")
+            var tmpNode = node
+            var relativePath = "/"+tmpNode.name
+            while (tmpNode.parent != null){
+                relativePath = "/"+tmpNode.parent?.name + relativePath
+                tmpNode = tmpNode.parent as FileNode.Directory
+            }
+            vm.updateUri( findFileUri(this, uri, relativePath) ?: Uri.EMPTY )
+        }
 
         setContent {
-            UiProjectRoot(projectFileRoot)
+            UiProjectRoot(projectFileRoot, onDrawerFileItemClick)
         }
     }
 }
 
+class ProjectRootViewModel : ViewModel() {
+    /**
+     * Activity 可以直接修改 uri，Composable 也能修改 uri，并实时刷新 UI，不会出现
+     * “UI 有自己一份，Activity 有自己一份，彼此不同步”的问题。
+     *
+     * 在 Compose 里，这个问题的标准解法就是：单一数据源（Single Source of Truth），即
+     * 把 uri 统一放在一个 状态容器（mutableStateOf 或 ViewModel）里，Activity 和
+     * Composable 都读写它。
+     */
+    var currentUri by mutableStateOf(Uri.EMPTY)
+        private set
+
+    fun updateUri(newUri: Uri) {
+        currentUri = newUri
+    }
+}
+
 @Composable
-fun UiProjectRoot(projectFileRoot: List<FileNode> = listOf()) {
+fun UiProjectRoot(
+    projectFileRoot: List<FileNode> = listOf(),
+    onDrawerFileItemClick: (file: FileNode) -> Unit = {},
+    vm: ProjectRootViewModel = viewModel()
+) {
     val context = LocalContext.current
     val expandDrawer = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    vm
 
     val recentFile = remember { mutableStateListOf<String>() }
     recentFile.add("file 1")
@@ -103,7 +145,16 @@ fun UiProjectRoot(projectFileRoot: List<FileNode> = listOf()) {
                 Text("Project", Modifier.padding(5.dp))
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item {
-                        UiFileTreeView(projectFileRoot)
+                        UiFileTreeView(
+                            projectFileRoot,
+                            onFileClick = onDrawerFileItemClick,
+                            afterFileClick = {
+                                // TODO: 点击file item之后，不能成功收起侧边栏
+                                scope.launch {
+                                    expandDrawer.close()
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -112,6 +163,7 @@ fun UiProjectRoot(projectFileRoot: List<FileNode> = listOf()) {
     ) {
         Column (modifier = Modifier.fillMaxSize()) {
             UiEditor(
+                fileUri = vm.currentUri,
                 text = "This ids this ids texthis ids texthis ids texthis ids texthis ids texthis ids texthis ids texthis ids textext\nhisd is text\nahis is text" +
                         "his dis text\nhis is tdext" +
                         "\n\n\n\n\n\n\n\n\n\n\n\n\ns\n" +
@@ -179,7 +231,6 @@ fun UiProjectRoot(projectFileRoot: List<FileNode> = listOf()) {
         IconButton(
             onClick = {
                 Log.i("ProjectRootActivity", "expendDrawer = $expandDrawer")
-                Log.i("ProjectRootActivity", "AA")
                 scope.launch {
                     expandDrawer.apply {
                         if (isClosed) open() else close()
@@ -197,16 +248,7 @@ fun UiProjectRoot(projectFileRoot: List<FileNode> = listOf()) {
 @Composable
 fun PreviewUiProjectRoot() {
     val sampleData = listOf(
-        FileNode.Directory("src",listOf(
-            FileNode.Directory("main",listOf(
-                FileNode.File("MainActivity.kt"),
-                FileNode.File("Utils.kt")
-            )),
-            FileNode.Directory("test", listOf(
-                FileNode.File("MainActivityTest.kt")
-            ))
-        )),
-        FileNode.File("README.md")
+        sampleFiles()
     )
     UiProjectRoot(sampleData)
 }
