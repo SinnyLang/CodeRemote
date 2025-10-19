@@ -25,4 +25,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "CodeRemote"
 include(":app")
- 
+include(":EditCore")
