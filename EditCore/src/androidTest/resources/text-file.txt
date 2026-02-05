@@ -1,0 +1,16 @@
+import dalvik.system.DexClassLoader;
+
+// 委托关系 BootClassLoader <- this Loader <- PathClassLoader <- baseAudioPlayerDexClassLoader
+// this Loader 拦截目标类； baseAudioPlayerDexClassLoader 加载目标类
+// this Loader 直接继承 DexClassLoader 可省略 baseAudioPlayerDexClassLoader
+public class MediaSessionHookClassLoader extends ClassLoader{
+    private Context context;
+    private DexClassLoader baseAudioPlayerDexClassLoader = null;
+    ArrayList<String> classesArrays = new ArrayList<>();
+    public MediaSessionHookClassLoader(ClassLoader parent, Context currentContext) {
+        super(parent); // 继承系统默认的 ClassLoader
+        this.context = currentContext;
+    }
+
+    ...
+}
