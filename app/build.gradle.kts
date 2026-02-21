@@ -9,6 +9,9 @@ plugins {
 
 
 android {
+    lint {
+        abortOnError = true
+    }
     namespace = "xyz.sl.coderemote"
     compileSdk = 35
 
@@ -23,6 +26,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            isDebuggable = true
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -32,11 +43,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
@@ -44,6 +55,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":piecetable"))
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.material3)

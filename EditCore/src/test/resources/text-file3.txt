@@ -1,4 +1,2 @@
-# CodeRemote
-## Todo List
- - Edit local project or files
- - Connect Server
+我采用了一个Java库使用PceieTable来编辑文本，但是其要求输入Path路径
+测试内容：
