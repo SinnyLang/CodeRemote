@@ -197,4 +197,9 @@ public class BaseEditorController implements EditorController{
     public TextEdit getTextEdit() {
         return textEdit;
     }
+
+    @Override
+    public int getTextRows() {
+        return textEdit.rows();
+    }
 }

@@ -18,4 +18,6 @@ public interface EditorController {
     int getCursorOffset();
     void setCursorOffset(int offset);
     void dispatch(EditorAction action);
+
+    int getTextRows();
 }

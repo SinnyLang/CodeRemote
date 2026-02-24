@@ -3,20 +3,28 @@ package xyz.sl.coderemote.ui
 import android.app.Application
 import android.util.Log
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import xyz.sl.coderemote.core.EditorAction
 import xyz.sl.coderemote.core.TextEditorControllerViewModel
 import xyz.sl.coderemote.core.TextEditorControllerViewModelFactory
 
 @Composable
-fun UiTextEditArea(controllerViewModel: TextEditorControllerViewModel){
+fun UiTextEditArea(
+    controllerViewModel: TextEditorControllerViewModel,
+    textEditAreaModifier: Modifier,
+    textStyle: TextStyle = LocalTextStyle.current.copy()
+) {
     val controller = controllerViewModel.controller
 
     val textFieldValue = remember {
@@ -59,6 +67,8 @@ fun UiTextEditArea(controllerViewModel: TextEditorControllerViewModel){
     }
 
     BasicTextField(
+        modifier = textEditAreaModifier,
+        textStyle = textStyle,
         value = textFieldValue.value,
         onValueChange = { newTextValue ->
             handleBasicTextValueChange(textFieldValue.value, newTextValue)
@@ -134,7 +144,10 @@ fun UiTextEditAreaPreview(){
     )
 
 
-    UiTextEditArea(controllerViewModel = controllerViewModel )
+    UiTextEditArea(
+        controllerViewModel = controllerViewModel,
+        textEditAreaModifier = Modifier
+    )
 
 
 
