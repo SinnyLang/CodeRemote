@@ -1,25 +1,17 @@
 package xyz.sl.coderemote.ui
 
+import android.app.Application
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
@@ -41,7 +33,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -49,10 +40,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
+import androidx.lifecycle.viewmodel.compose.viewModel
+import xyz.sl.coderemote.core.TextEditorControllerViewModel
+import xyz.sl.coderemote.core.TextEditorControllerViewModelFactory
 
 import xyz.sl.coderemote.ui.theme.TextEditorComposeTheme
 import java.io.File
-import kotlin.math.log10
 
 class EditorActivity : ComponentActivity() {
     private var savedText by mutableStateOf("")
@@ -124,9 +117,18 @@ fun UiEditor(
     menusData: List<OptionItem> = listOf(),
     modifier: Modifier = Modifier
 ) {
-    var context = LocalContext.current
-    var file = DocumentFile.fromSingleUri(context, fileUri)
+    val application : Application = LocalContext.current.applicationContext as Application
+    var file = DocumentFile.fromSingleUri(application, fileUri)
         ?: DocumentFile.fromFile(File("UnknownFile"))
+
+    val controllerViewModel : TextEditorControllerViewModel = viewModel(
+        factory = TextEditorControllerViewModelFactory(text, application)
+    )
+
+    var textStyle = LocalTextStyle.current.copy(fontSize = 20.sp)
+    var editorBackgroundModifier = Modifier.background(Color.LightGray)
+
+
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -160,61 +162,17 @@ fun UiEditor(
                         .padding(innerPadding)
                         .padding(start = 5.dp)
                 )
+                UiTextAreaShow(
+                    textEditorControllerViewModel = controllerViewModel,
+                    textStyle = textStyle,
+                    editorBackgroundModifier = editorBackgroundModifier
+                )
 
-                val scrollState = rememberScrollState()
-                val horizontalScrollState = rememberScrollState()
-                Row(
-                    Modifier.padding(0.dp).fillMaxSize()
-                ) {
-                    LineNumberColumn(
-                        text.lines().size.coerceAtLeast(1),
-                        scrollState
-                    )
-                    Box(modifier = Modifier
-                        .background(Color.Gray)
-                        .padding(start = 2.dp, end = 5.dp, top = 0.dp, bottom = 0.dp)
-                        .fillMaxSize()
-                        .verticalScroll(scrollState)
-                    ) {
-                        BasicTextField(
-                            value = text,
-                            onValueChange = onTextChange,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .horizontalScroll(horizontalScrollState),
-                            textStyle = LocalTextStyle.current.copy(fontSize = 16.sp)
-                        )
-                    }
-                }
             }
         },
     )
 }
 
-@Composable
-fun LineNumberColumn(lines: Int, scrollState: ScrollState) {
-    var width = 10 * (log10(lines.toDouble()).toInt() + 1)
-//
-
-    Column(
-        modifier = Modifier
-            .width(width.dp)
-            .fillMaxHeight()
-            .verticalScroll(scrollState),
-        horizontalAlignment = Alignment.End
-    ) {
-        for (i in 1..lines.coerceAtLeast(1)) {
-            Text(
-                text = i.toString(),
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier
-                    .padding(end = 0.dp)
-//                    .height(22.dp) // 与行高保持一致
-            )
-        }
-    }
-}
 
 @Composable
 fun UiTaskMenuButton(
