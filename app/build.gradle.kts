@@ -1,4 +1,6 @@
 import de.undercouch.gradle.tasks.download.Download
+import java.io.FileInputStream
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -7,6 +9,12 @@ plugins {
     id("de.undercouch.download") version "5.5.0"
 }
 
+// 读取 local.properties
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
 
 android {
     lint {
@@ -23,6 +31,16 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 方式1：创建 BuildConfig 字段
+        buildConfigField("String", "SSH_WIN_PASSWORD", "\"${localProperties.getProperty("ssh.win.password", "")}\"")
+        buildConfigField("String", "SSH_LINUX_PASSWORD", "\"${localProperties.getProperty("ssh.linux.password", "")}\"")
+        buildConfigField("String", "SSH_WIN_HOST", "\"${localProperties.getProperty("ssh.win.host", "")}\"")
+        buildConfigField("String", "SSH_LINUX_HOST", "\"${localProperties.getProperty("ssh.linux.host", "")}\"")
+        buildConfigField("String", "SSH_WIN_PORT", "\"${localProperties.getProperty("ssh.win.port", "22")}\"")
+        buildConfigField("String", "SSH_LINUX_PORT", "\"${localProperties.getProperty("ssh.linux.port", "9988")}\"")
+        buildConfigField("String", "SSH_WIN_USER", "\"${localProperties.getProperty("ssh.win.user", "")}\"")
+        buildConfigField("String", "SSH_LINUX_USER", "\"${localProperties.getProperty("ssh.linux.user", "")}\"")
     }
 
     buildTypes {
@@ -51,10 +69,14 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
 dependencies {
+    implementation(libs.jsch)
+    implementation(libs.termlib)
+
     implementation(project(":piecetable"))
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.material.icons.extended)
