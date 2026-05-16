@@ -13,7 +13,7 @@ android {
         abortOnError = true
     }
     namespace = "xyz.sl.coderemote"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "xyz.sl.coderemote"
@@ -68,7 +68,9 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.documentfile)
+
     testImplementation(libs.junit)
+    testImplementation(libs.mockito.core)
     testImplementation(libs.mockk)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

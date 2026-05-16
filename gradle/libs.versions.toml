@@ -1,7 +1,8 @@
 [versions]
-agp = "8.7.3"
+agp = "8.13.2"
 datastorePreferences = "1.1.7"
 kotlin = "2.1.0"
+kotlin = "2.2.0"
 coreKtx = "1.16.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -12,6 +13,7 @@ composeBom = "2025.07.00"
 lifecycleViewmodelCompose = "2.9.2"
 lifecycleViewmodelKtx = "2.9.2"
 documentfile = "1.1.0"
+mockitoCore = "5.8.0"
 mockk = "1.14.5"
 appcompat = "1.7.1"
 material = "1.13.0"
@@ -37,6 +39,7 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
