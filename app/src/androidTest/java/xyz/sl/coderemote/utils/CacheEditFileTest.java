@@ -22,6 +22,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
+import xyz.sl.coderemote.MainActivity;
+
 @RunWith(AndroidJUnit4.class)
 public class CacheEditFileTest {
     private Context context;
@@ -29,6 +31,7 @@ public class CacheEditFileTest {
     @Before
     public void setUp() {
         context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        MainActivity.Companion.setEditFileMangerForUiPreview(context);
     }
 
     @Test

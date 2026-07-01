@@ -1,6 +1,5 @@
 package xyz.sl.coderemote.ui
 
-import android.app.Application
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -28,6 +27,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import xyz.sl.coderemote.MainActivity
 import xyz.sl.coderemote.core.TextEditorControllerViewModel
 import xyz.sl.coderemote.core.TextEditorControllerViewModelFactory
 import kotlin.math.log10
@@ -100,6 +100,8 @@ fun LineNumberColumnComponent(
 @Preview
 @Composable
 fun UiTextAreaShowPreview(){
+    MainActivity.setEditFileMangerForUiPreview(LocalContext.current)
+
     val text = remember { """
         > Configure project :app
         Configuration '_internal-unified-test-platform-android-device-provider-ddmlib' was resolved during configuration time.
@@ -188,9 +190,8 @@ fun UiTextAreaShowPreview(){
         """.trimIndent()
     }
 
-    val application : Application = LocalContext.current.applicationContext as Application
     val controllerViewModel : TextEditorControllerViewModel = viewModel(
-        factory = TextEditorControllerViewModelFactory(text, application)
+        factory = TextEditorControllerViewModelFactory(text)
     )
 
 

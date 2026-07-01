@@ -1,6 +1,5 @@
 package xyz.sl.coderemote.core;
 
-import android.content.Context;
 import android.net.Uri;
 import android.util.Log;
 
@@ -14,7 +13,9 @@ import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
 
+import xyz.sl.coderemote.MainActivity;
 import xyz.sl.coderemote.utils.CacheEditFile;
+import xyz.sl.coderemote.utils.EditFileManger;
 
 public class BaseEditorController implements EditorController{
     private final Cursor cursor;
@@ -30,8 +31,8 @@ public class BaseEditorController implements EditorController{
 
 
     // ------------- BaseEditorController -----------------
-    public BaseEditorController(Context context, Uri uri) throws IOException {
-        cache = CacheEditFile.fromUri(context, uri);
+    public BaseEditorController(Uri uri) throws IOException {
+        cache = MainActivity.Companion.getEditFileManger().getCacheFile(uri);
         textPath = cache.getCacheFile().toPath();
 
         cursor = new Cursor(0, 0);
@@ -40,8 +41,8 @@ public class BaseEditorController implements EditorController{
         cursorPositionMapper = setPositionMapper();
     }
 
-    public BaseEditorController(Context context, String text) throws IOException {
-        cache = CacheEditFile.empty(context);
+    public BaseEditorController(String text) throws IOException {
+        cache = MainActivity.Companion.getEditFileManger().getCacheFileEmpty();
         textPath = cache.getCacheFile().toPath();
 
         cursor = new Cursor(0, 0);

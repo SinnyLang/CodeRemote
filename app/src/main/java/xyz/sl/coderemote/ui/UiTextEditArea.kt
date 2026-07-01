@@ -1,6 +1,5 @@
 package xyz.sl.coderemote.ui
 
-import android.app.Application
 import android.util.Log
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.LocalTextStyle
@@ -138,9 +137,9 @@ fun UiTextEditAreaPreview(){
         """.trimIndent()
     }
 
-    val application : Application = LocalContext.current.applicationContext as Application
+//    val application : Application = LocalContext.current.applicationContext as Application
     val controllerViewModel : TextEditorControllerViewModel = viewModel(
-        factory = TextEditorControllerViewModelFactory(text, application)
+        factory = TextEditorControllerViewModelFactory(text)
     )
 
 
