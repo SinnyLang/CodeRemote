@@ -42,12 +42,12 @@ public class BaseEditorControllerTest {
         StreamUtils.writeStringToFile(text, tmpFile);
         Uri uri = toUri(tmpFile);
         // fromUri
-        BaseEditorController editorCntl = new BaseEditorController(context, uri);
+        BaseEditorController editorCntl = new BaseEditorController(uri);
         assertEquals("code remote\n", editorCntl.getTextEdit().getText(0));
 
 
         // fromText
-        BaseEditorController editorCntl_ = new BaseEditorController(context, text);
+        BaseEditorController editorCntl_ = new BaseEditorController(text);
         assertEquals("code remote\n", editorCntl_.getTextEdit().getText(0));
     }
 
@@ -59,7 +59,7 @@ public class BaseEditorControllerTest {
         StreamUtils.writeStringToFile(text, tmpFile);
         Uri uri = toUri(tmpFile);
         // fromUri
-        BaseEditorController editorController = new BaseEditorController(context, uri);
+        BaseEditorController editorController = new BaseEditorController(uri);
         editorController.dispatch(new EditorAction.Jump(1, 3));
         editorController.dispatch(new EditorAction.Insert("\r\n"));
         editorController.dispatch(new EditorAction.Jump(2, 0));

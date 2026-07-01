@@ -1,6 +1,5 @@
 package xyz.sl.coderemote.ui
 
-import android.app.Application
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
@@ -41,10 +40,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewmodel.compose.viewModel
+import xyz.sl.coderemote.MainActivity
 import xyz.sl.coderemote.core.TextEditorControllerViewModel
 import xyz.sl.coderemote.core.TextEditorControllerViewModelFactory
 
 import xyz.sl.coderemote.ui.theme.TextEditorComposeTheme
+import xyz.sl.coderemote.utils.EditFileManger
 import java.io.File
 
 class EditorActivity : ComponentActivity() {
@@ -117,12 +118,12 @@ fun UiEditor(
     menusData: List<OptionItem> = listOf(),
     modifier: Modifier = Modifier
 ) {
-    val application : Application = LocalContext.current.applicationContext as Application
-    var file = DocumentFile.fromSingleUri(application, fileUri)
+//    val application : Application = LocalContext.current.applicationContext as Application
+    var file = DocumentFile.fromSingleUri(LocalContext.current.applicationContext, fileUri)
         ?: DocumentFile.fromFile(File("UnknownFile"))
 
     val controllerViewModel : TextEditorControllerViewModel = viewModel(
-        factory = TextEditorControllerViewModelFactory(text, application)
+        factory = TextEditorControllerViewModelFactory(text)
     )
 
     var textStyle = LocalTextStyle.current.copy(fontSize = 20.sp)
@@ -234,6 +235,8 @@ fun UiMoreMenuButton(
 @Preview(backgroundColor = 0xff8800L)
 @Composable
 fun PreviewUiEditor() {
+    MainActivity.setEditFileMangerForUiPreview(LocalContext.current)
+
     var tasksData = List(100) { it ->
         OptionItem("Task $it") {}
     }
