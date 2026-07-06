@@ -28,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -40,11 +39,13 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import xyz.sl.coderemote.MainActivity
 import xyz.sl.coderemote.utils.UriUtils.findFileUri
 import xyz.sl.coderemote.utils.UriUtils.uriToFileNode
 
+var debugTag : String = "ProjectRootActivity"
+
 class ProjectRootActivity : ComponentActivity() {
-    var debugTag : String = "ProjectRootActivity"
 
     private var projectFileRoot: List<FileNode> = listOf()
     private var uri : Uri = Uri.EMPTY
@@ -70,23 +71,35 @@ class ProjectRootActivity : ComponentActivity() {
         // TODO: avoid uri is null in StartProjectActivity
         Log.i(debugTag,"uri"+uri.toString())
 
+        // 点击文件列表中的文件触发此函数
+        //   如果是文件则更新 currentUri
         val onDrawerFileItemClick = { node: FileNode ->
             Log.i(debugTag, "onDrawerFileItemClick()->${node.name}")
             var tmpNode = node
             var relativePath = "/"+tmpNode.name
+
+            // 子文件
             while (tmpNode.parent != null){
                 relativePath = "/"+tmpNode.parent?.name + relativePath
                 tmpNode = tmpNode.parent as FileNode.Directory
             }
-            vm.updateUri( findFileUri(this, uri, relativePath) ?: Uri.EMPTY )
+
+            // 更新当前显示的文件
+            vm.updateCurrentUri( findFileUri(this, uri, relativePath) ?: Uri.EMPTY )
         }
 
         setContent {
-            UiProjectRoot(projectFileRoot, onDrawerFileItemClick)
+            UiProjectRoot(
+                projectFileRoot,
+                onDrawerFileItemClick = onDrawerFileItemClick,
+            )
         }
     }
 }
 
+/**
+ * 保存数据。ProjectRootActivity 重组时，不会刷新该 ViewModel
+ */
 class ProjectRootViewModel : ViewModel() {
     /**
      * Activity 可以直接修改 uri，Composable 也能修改 uri，并实时刷新 UI，不会出现
@@ -96,11 +109,40 @@ class ProjectRootViewModel : ViewModel() {
      * 把 uri 统一放在一个 状态容器（mutableStateOf 或 ViewModel）里，Activity 和
      * Composable 都读写它。
      */
+
+    /**
+     * 正在打开的文件的Uri
+     */
     var currentUri by mutableStateOf(Uri.EMPTY)
         private set
 
-    fun updateUri(newUri: Uri) {
+    fun updateCurrentUri(newUri: Uri) {
         currentUri = newUri
+        if (!recentUri.contains(currentUri)) {
+            addRecentFile(currentUri)
+        }
+        Log.d(Tag, "currentUri: $currentUri")
+    }
+
+    // 最近打开过的文件 Uri
+    var recentUri = mutableStateListOf<Uri>()
+
+    fun addRecentFile(uri: Uri){
+        recentUri.add(uri)
+    }
+
+    fun delRecentFile(uri: Uri){
+        // 如果 uri 正在打开，则先关闭
+        if (currentUri.equals(uri)) {
+
+        }
+
+        // 将 uri 资源文件保存回原始文件
+        {  } /* TODO */
+
+        // 从最近文件列表中移除 uri
+        recentUri.removeIf { it.equals(uri) }
+        currentUri = recentUri.getOrElse(0, { Uri.EMPTY })
     }
 }
 
@@ -110,17 +152,8 @@ fun UiProjectRoot(
     onDrawerFileItemClick: (file: FileNode) -> Unit = {},
     vm: ProjectRootViewModel = viewModel()
 ) {
-    val context = LocalContext.current
     val expandDrawer = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    vm
-
-    val recentFile = remember { mutableStateListOf<String>() }
-    recentFile.add("file 1")
-    recentFile.add("file 2")
-    val projectFile = remember { mutableStateListOf<String>() }
-    projectFile.add("file 1")
-    projectFile.add("file 2")
 
     var tasksData = List(100) { it ->
         OptionItem("Task $it") {}
@@ -140,8 +173,14 @@ fun UiProjectRoot(
             ) {
                 Text("Code Remote", modifier = Modifier.padding(16.dp), fontSize = 26.sp)
                 HorizontalDivider()
+
                 Text("Recent", Modifier.padding(5.dp))
-                UiRecentFileExplorer(recentFile)
+                UiRecentFileExplorer(
+                    vm.recentUri,
+                    onCloseFileItem = { uri: Uri -> vm.delRecentFile(uri) },
+                    onClickFileItem = { uri: Uri -> vm.updateCurrentUri(uri) }
+                )
+
                 Text("Project", Modifier.padding(5.dp))
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item {
@@ -157,6 +196,7 @@ fun UiProjectRoot(
                         )
                     }
                 }
+
             }
         },
         drawerState = expandDrawer,
@@ -164,42 +204,6 @@ fun UiProjectRoot(
         Column (modifier = Modifier.fillMaxSize()) {
             UiEditor(
                 fileUri = vm.currentUri,
-                text = "This ids this ids texthis ids texthis ids texthis ids texthis ids texthis ids texthis ids texthis ids textext\nhisd is text\nahis is text" +
-                        "his dis text\nhis is tdext" +
-                        "\n\n\n\n\n\n\n\n\n\n\n\n\ns\n" +
-                        "dhids is text\n" +
-                        "dhzzis is text\n" +
-                        "dhis is text\n" +
-                        "d\n" +
-                        "s\n" +
-                        "a\n" +
-                        "d\n" +
-                        "d\n" +
-                        "f\n" +
-                        "f\n" +
-                        "\n" +
-                        "\n" +
-                        "\n" +
-                        "\n" +
-                        "\ndasa" +
-                        "This id1s text\n" +
-                        "hisd is text\n" +
-                        "ahis is2 textT" +
-                        "his i3ds text\nhi" +
-                        "sd is 4text\nahis is" +
-                        "\n texet" +
-                        "This i5ds text\n" +
-                        "hisd 4is text\n" +
-                        "ahis i6s textT" +
-                        "his i7ds text\nhi" +
-                        "sd i8 text\nahis is" +
-                        "\n t9ext"+
-                        "his i7ds text\nhi" +
-                        "sd i8 text\nahis is" +
-                        "\n t29ext"+
-                        "his i17ds text\nhi" +
-                        "sd i18 text\nahis is" +
-                        "\n t92ext",
                 tasksData = tasksData,
                 menusData = menusData,
                 onTextChange = {},
@@ -247,6 +251,8 @@ fun UiProjectRoot(
 @Preview(backgroundColor = 0x888888)
 @Composable
 fun PreviewUiProjectRoot() {
+    MainActivity.setEditFileMangerForUiPreview(LocalContext.current)
+
     val sampleData = listOf(
         sampleFiles()
     )

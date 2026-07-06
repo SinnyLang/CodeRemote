@@ -1,5 +1,6 @@
 package xyz.sl.coderemote.ui
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
@@ -14,23 +15,29 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import xyz.sl.coderemote.MainActivity
 
 @Composable
-fun UiRecentFileExplorer(recentFile: List<String>){
+fun UiRecentFileExplorer(
+    recentFileUri: List<Uri>,
+    onClickFileItem : (Uri) -> Unit = {},
+    onCloseFileItem : (Uri) -> Unit = {}
+){
     Column {
-        recentFile.forEach { fileItem ->
+        recentFileUri.forEach { fileUriItem ->
+            val fileItemName:String = MainActivity.editFileManger.getFileNameFromUri(fileUriItem)
             NavigationDrawerItem(
                 label = {
                     Row {
                         Icon(Icons.Default.InsertDriveFile, contentDescription = "")
-                        Text(fileItem, modifier = Modifier.paddingFromBaseline(15.dp))
+                        Text(fileItemName, modifier = Modifier.paddingFromBaseline(15.dp))
                     }
                 },
                 selected = false,
-                onClick = {},
+                onClick = { onClickFileItem(fileUriItem) },   // 此处点击打开文件
                 modifier = Modifier.height(20.dp),
                 badge = {
-                    IconButton(onClick = {}) {
+                    IconButton(onClick = { onCloseFileItem(fileUriItem) }) {
                         Icon(Icons.Default.Close, contentDescription = "")
                     }
                 }

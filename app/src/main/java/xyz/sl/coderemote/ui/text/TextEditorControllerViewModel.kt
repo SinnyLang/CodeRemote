@@ -1,8 +1,10 @@
-package xyz.sl.coderemote.core
+package xyz.sl.coderemote.ui.text
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import xyz.sl.coderemote.core.BaseEditorController
+import xyz.sl.coderemote.core.EditorController
 
 class TextEditorControllerViewModel(
     textSavedStateHandle: SavedStateHandle,

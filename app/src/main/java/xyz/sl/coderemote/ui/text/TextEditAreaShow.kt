@@ -1,4 +1,4 @@
-package xyz.sl.coderemote.ui
+package xyz.sl.coderemote.ui.text
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -28,16 +28,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import xyz.sl.coderemote.MainActivity
-import xyz.sl.coderemote.core.TextEditorControllerViewModel
-import xyz.sl.coderemote.core.TextEditorControllerViewModelFactory
 import kotlin.math.log10
 
+/** 该组件能显示行号和文本
+ *
+ * @param textEditorControllerViewModel 要显示的文本被保存在此处
+ * @param textStyle
+ * @param editorBackgroundColor
+ */
 @Composable
 fun UiTextAreaShow(
     textEditorControllerViewModel: TextEditorControllerViewModel,
     textStyle : TextStyle = LocalTextStyle.current.copy(),
-    editorBackgroundModifier: Modifier = Modifier
+    editorBackgroundColor: Color = Color.LightGray
 ){
+    // 记录文本区域滚动的状态
     var scrollState = rememberScrollState()
     var horizontalScrollState = rememberScrollState()
 
@@ -50,13 +55,13 @@ fun UiTextAreaShow(
             fontSize = textStyle.fontSize
         )
         Box (
-            modifier = editorBackgroundModifier
+            modifier = Modifier.background(editorBackgroundColor)
                 .padding(start = 2.dp, end = 5.dp, top = 0.dp, bottom = 0.dp)
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
             UiTextEditArea(
-                controllerViewModel = textEditorControllerViewModel,
+                textEditorControllerViewModel = textEditorControllerViewModel,
                 textEditAreaModifier = Modifier
                     .fillMaxSize()
                     .horizontalScroll(horizontalScrollState),
@@ -68,6 +73,13 @@ fun UiTextAreaShow(
 
 }
 
+/** 显示行号的组件
+ *
+ *    当前问题：改变数字的字体可能会导致显示到第二行；滚动到头会有粘滞效应
+ *  @param lines 总行数
+ *  @param scrollState 滚动状态
+ *  @param fontSize
+ */
 @Composable
 fun LineNumberColumnComponent(
     lines: Int,
@@ -75,7 +87,7 @@ fun LineNumberColumnComponent(
     fontSize: TextUnit
 ) {
     var width = 10 * (log10(lines.toDouble()).toInt() + 2)
-//
+
 
     Column(
         modifier = Modifier
@@ -196,12 +208,10 @@ fun UiTextAreaShowPreview(){
 
 
     var textStyle = LocalTextStyle.current.copy(fontSize = 20.sp)
-    var editorBackgroundModifier = Modifier.background(Color.LightGray)
 
     UiTextAreaShow(
         textEditorControllerViewModel = controllerViewModel,
         textStyle = textStyle,
-        editorBackgroundModifier = editorBackgroundModifier
     )
 
 }

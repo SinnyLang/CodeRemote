@@ -6,7 +6,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
@@ -38,15 +37,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewmodel.compose.viewModel
 import xyz.sl.coderemote.MainActivity
-import xyz.sl.coderemote.core.TextEditorControllerViewModel
-import xyz.sl.coderemote.core.TextEditorControllerViewModelFactory
+import xyz.sl.coderemote.ui.text.TextEditorControllerViewModel
+import xyz.sl.coderemote.ui.text.TextEditorControllerViewModelFactory
+import xyz.sl.coderemote.ui.text.UiTextAreaShow
 
 import xyz.sl.coderemote.ui.theme.TextEditorComposeTheme
-import xyz.sl.coderemote.utils.EditFileManger
 import java.io.File
+
+val Tag = "CR-Ui-Editor"
 
 class EditorActivity : ComponentActivity() {
     private var savedText by mutableStateOf("")
@@ -75,7 +75,6 @@ class EditorActivity : ComponentActivity() {
                 useDarkTheme = true
             ) {
                 UiEditor(
-                    text = savedText,
                     onTextChange = { savedText = it },
 //                    onNew = { savedText = "" },
 //                    onOpen = { openFileLauncher.launch(arrayOf("*/*")) },
@@ -111,24 +110,19 @@ data class OptionItem(val text: String, val action: () -> Unit)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UiEditor(
-    text: String,
     fileUri: Uri = Uri.EMPTY,
     onTextChange: (String) -> Unit,
     tasksData: List<OptionItem> = listOf(),
     menusData: List<OptionItem> = listOf(),
     modifier: Modifier = Modifier
 ) {
-//    val application : Application = LocalContext.current.applicationContext as Application
-    var file = DocumentFile.fromSingleUri(LocalContext.current.applicationContext, fileUri)
-        ?: DocumentFile.fromFile(File("UnknownFile"))
-
-    val controllerViewModel : TextEditorControllerViewModel = viewModel(
-        factory = TextEditorControllerViewModelFactory(text)
-    )
+//    var file = DocumentFile.fromSingleUri(LocalContext.current.applicationContext, fileUri)
+//        ?: DocumentFile.fromFile(File("UnknownFile"))
 
     var textStyle = LocalTextStyle.current.copy(fontSize = 20.sp)
-    var editorBackgroundModifier = Modifier.background(Color.LightGray)
 
+    var isOpeningFile : Boolean = remember( fileUri ) { !Uri.EMPTY.equals(fileUri) }
+    var fileName : String = MainActivity.editFileManger.getFileNameFromUri(fileUri)
 
     Scaffold(
         modifier = modifier,
@@ -156,18 +150,32 @@ fun UiEditor(
             Column {
                 // 当前文件名标注
                 Text(
-                    text = file.name?: "UnknownFile",
+                    text = fileName,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .padding(innerPadding)
                         .padding(start = 5.dp)
                 )
-                UiTextAreaShow(
-                    textEditorControllerViewModel = controllerViewModel,
-                    textStyle = textStyle,
-                    editorBackgroundModifier = editorBackgroundModifier
-                )
+
+                if (!isOpeningFile) {
+                    Text("未打开文件")
+                } else {
+                    // TODO : 当前：文件打开异常会将异常信息显示到编辑区
+                    //        应该：文件打开异常，捕捉异常然后使用Text等组件展示
+                    val content = remember(fileUri) {
+                        MainActivity.editFileManger.readTextFromUri(fileUri)
+                    }
+                    val controllerViewModel: TextEditorControllerViewModel = viewModel(
+                        key = fileUri.toString(),  // 绑定到 fileUri
+                        factory = TextEditorControllerViewModelFactory(content)
+                    )
+                    UiTextAreaShow(
+                        textEditorControllerViewModel = controllerViewModel,
+                        textStyle = textStyle,
+                        editorBackgroundColor = Color.LightGray
+                    )
+                }
 
             }
         },
@@ -250,10 +258,10 @@ fun PreviewUiEditor() {
         useDarkTheme = false
     ) {
         UiEditor(
-            text = "savedText",
             onTextChange = { "savedText = it" },
             tasksData = tasksData,
-            menusData = menusData
+            menusData = menusData,
+            fileUri = Uri.fromFile(File("abc"))
         )
     }
 }

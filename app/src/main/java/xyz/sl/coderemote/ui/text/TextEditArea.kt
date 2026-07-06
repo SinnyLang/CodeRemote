@@ -1,4 +1,4 @@
-package xyz.sl.coderemote.ui
+package xyz.sl.coderemote.ui.text
 
 import android.util.Log
 import androidx.compose.foundation.text.BasicTextField
@@ -12,24 +12,24 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import xyz.sl.coderemote.MainActivity
 import xyz.sl.coderemote.core.EditorAction
-import xyz.sl.coderemote.core.TextEditorControllerViewModel
-import xyz.sl.coderemote.core.TextEditorControllerViewModelFactory
 
 @Composable
 fun UiTextEditArea(
-    controllerViewModel: TextEditorControllerViewModel,
+    textEditorControllerViewModel: TextEditorControllerViewModel,
     textEditAreaModifier: Modifier,
     textStyle: TextStyle = LocalTextStyle.current.copy()
 ) {
-    val controller = controllerViewModel.controller
+    val controller = textEditorControllerViewModel.controller
 
-    val textFieldValue = remember {
+    // 当 textEditorControllerViewModel 更新时，刷新文本，否则不会刷新文本
+    val textFieldValue = remember (textEditorControllerViewModel) {
         mutableStateOf(TextFieldValue(controller.text.toString()))
     }
 
+    // 文本框中内容发生改变时调用此函数
     fun handleBasicTextValueChange(oldTextValue: TextFieldValue, newTextValue: TextFieldValue){
         Log.d("TextEdit-Action",
             "Before Update: Controller Cursor in: "+controller.cursorOffset+
@@ -73,10 +73,10 @@ fun UiTextEditArea(
             handleBasicTextValueChange(textFieldValue.value, newTextValue)
         },
     )
-
 }
 
-/**
+/** 判断两段文本之间是插入还是删除
+ *
  *    old: |a|b|    --> | start = 1 | oldEnd = 0 |  -->  del = [1,1] = ""
  *         |0|1|                    | newEnd = 1 |       ins = [1,2] = "c"
  *         -------
@@ -128,6 +128,7 @@ data class DiffResult(
 @Preview
 @Composable
 fun UiTextEditAreaPreview(){
+    MainActivity.setEditFileMangerForUiPreview(LocalContext.current)
     val text = remember { """
         12345
         abcde
@@ -144,7 +145,7 @@ fun UiTextEditAreaPreview(){
 
 
     UiTextEditArea(
-        controllerViewModel = controllerViewModel,
+        textEditorControllerViewModel = controllerViewModel,
         textEditAreaModifier = Modifier
     )
 
