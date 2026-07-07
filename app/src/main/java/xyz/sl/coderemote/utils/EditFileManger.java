@@ -7,6 +7,8 @@ import android.net.Uri;
 import android.provider.OpenableColumns;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedReader;
@@ -15,6 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
@@ -80,7 +83,7 @@ public class EditFileManger {
         return result; // 未知类型
     }
 
-
+    //============== read ============================================
 
     /**
      * 从 Uri 读取文本内容，完全保留原始换行符（CRLF / LF / CR）。
@@ -156,5 +159,70 @@ public class EditFileManger {
 
     public interface OnLineReadListener {
         void onLineRead(String line);
+    }
+
+    //============== write ============================================
+    /**
+     * 将字节数组写入指定的 Uri（覆盖原有内容）。
+     *
+     * @param context 上下文
+     * @param uri     目标 Uri（须有写入权限）
+     * @param data    要写入的字节数据
+     * @throws IOException 如果写入失败（权限、磁盘错误等）
+     */
+    public static void writeBytesToUri(Context context, Uri uri, byte[] data) throws IOException {
+        if (context == null) {
+            throw new RuntimeException("Code Remote EditFileManger is not initial");
+        }
+        if (uri == null) {
+            throw new NullPointerException("uri is null");
+        }
+        if (data == null) {
+            throw new NullPointerException("data is null");
+        }
+
+        ContentResolver resolver = context.getContentResolver();
+        try (OutputStream outputStream = resolver.openOutputStream(uri)) {
+            if (outputStream == null) {
+                throw new IOException("Failed to open output stream for URI: " + uri);
+            }
+            outputStream.write(data);
+            outputStream.flush();
+        } catch (IOException | SecurityException | IllegalArgumentException e) {
+            Log.e("EditFileManger", "Write bytes error: " + e.getMessage());
+            throw e; // 向上传递
+        }
+    }
+
+    /**
+     * 将字符串写入指定的 Uri（指定字符集），覆盖原有内容。
+     *
+     * @param uri     目标 Uri
+     * @param text    要写入的文本
+     * @param charset 字符集（如 StandardCharsets.UTF_8）
+     * @throws IOException 如果写入失败
+     */
+    public void writeTextToUri(Uri uri, String text, Charset charset) throws IOException {
+        if (context == null) {
+            throw new RuntimeException("Code Remote EditFileManger is not initial");
+        }
+        if (uri == null) {
+            throw new NullPointerException("uri is null");
+        }
+        if (text == null) {
+            throw new NullPointerException("text is null");
+        }
+        if (charset == null) {
+            charset = StandardCharsets.UTF_8;
+        }
+        byte[] data = text.getBytes(charset);
+        writeBytesToUri(context, uri, data); // 复用静态方法
+    }
+
+    /**
+     * 将字符串写入指定的 Uri（默认 UTF-8）。
+     */
+    public void writeTextToUri(Uri uri, String text) throws IOException {
+        writeTextToUri(uri, text, StandardCharsets.UTF_8);
     }
 }

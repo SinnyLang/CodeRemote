@@ -2,6 +2,7 @@ package xyz.sl.coderemote.ui
 
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -27,6 +28,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +48,7 @@ import xyz.sl.coderemote.ui.text.UiTextAreaShow
 
 import xyz.sl.coderemote.ui.theme.TextEditorComposeTheme
 import java.io.File
+import java.io.IOException
 
 val Tag = "CR-Ui-Editor"
 
@@ -114,7 +118,8 @@ fun UiEditor(
     onTextChange: (String) -> Unit,
     tasksData: List<OptionItem> = listOf(),
     menusData: List<OptionItem> = listOf(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSaveReady: ((()->Unit)?) -> Unit = {}
 ) {
 //    var file = DocumentFile.fromSingleUri(LocalContext.current.applicationContext, fileUri)
 //        ?: DocumentFile.fromFile(File("UnknownFile"))
@@ -170,6 +175,34 @@ fun UiEditor(
                         key = fileUri.toString(),  // 绑定到 fileUri
                         factory = TextEditorControllerViewModelFactory(content)
                     )
+
+                    var saveFunction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+                    // 保存当前文件内容的函数
+                    val saveCurrentFile: () -> Unit = {
+                        try {
+                            val currentText = controllerViewModel.controller.text.toString()
+                            MainActivity.editFileManger.writeTextToUri(fileUri, currentText)
+                            Log.i("UiEditor", "File saved: $fileUri")
+                        } catch (e: IOException) {
+                            Log.e("UiEditor", "Save failed", e)
+                        }
+                    }
+
+                    // 当 fileUri 变化时更新保存函数
+                    LaunchedEffect(fileUri) {
+                        saveFunction = saveCurrentFile
+                        onSaveReady(saveFunction)
+                    }
+
+                    // 组件销毁时自动保存（可选）
+                    DisposableEffect(fileUri) {
+                        onDispose {
+                            // 如果需要在关闭时自动保存，可以在这里调用
+                             saveFunction?.invoke()
+                        }
+                    }
+
                     UiTextAreaShow(
                         textEditorControllerViewModel = controllerViewModel,
                         textStyle = textStyle,
@@ -180,6 +213,13 @@ fun UiEditor(
             }
         },
     )
+
+    // 当组件从组合中移除时清理引用
+    DisposableEffect(Unit) {
+        onDispose {
+            onSaveReady(null)
+        }
+    }
 }
 
 

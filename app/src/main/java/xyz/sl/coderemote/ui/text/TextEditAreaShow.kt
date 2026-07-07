@@ -75,7 +75,9 @@ fun UiTextAreaShow(
 
 /** 显示行号的组件
  *
- *    当前问题：改变数字的字体可能会导致显示到第二行；滚动到头会有粘滞效应
+ *    当前Bug：改变数字的字体可能会导致显示到第二行；
+ *            行号是固定的，不会随文本行数增减而变化；
+ *            滚动到头会有粘滞效应
  *  @param lines 总行数
  *  @param scrollState 滚动状态
  *  @param fontSize

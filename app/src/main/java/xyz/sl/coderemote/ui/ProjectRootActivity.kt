@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -165,6 +166,7 @@ fun UiProjectRoot(
     )
 
 //    val imeBottomDp = with(LocalDensity.current) { WindowInsets.ime.getBottom(this).toDp() }
+    var saveCurrentFile by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     ModalNavigationDrawer(
         drawerContent = {
@@ -177,7 +179,15 @@ fun UiProjectRoot(
                 Text("Recent", Modifier.padding(5.dp))
                 UiRecentFileExplorer(
                     vm.recentUri,
-                    onCloseFileItem = { uri: Uri -> vm.delRecentFile(uri) },
+                    onCloseFileItem = { uri: Uri ->
+                        // 如果当前编辑的文件是要移除的文件，先保存
+                        if (vm.currentUri == uri) {
+                            saveCurrentFile?.invoke()
+                        }
+
+                        // 移除文件
+                        vm.delRecentFile(uri)
+                    },
                     onClickFileItem = { uri: Uri -> vm.updateCurrentUri(uri) }
                 )
 
@@ -207,7 +217,10 @@ fun UiProjectRoot(
                 tasksData = tasksData,
                 menusData = menusData,
                 onTextChange = {},
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onSaveReady = { saveFn ->
+                    saveCurrentFile = saveFn
+                }
             )
 
             val tabs = listOf("输出", "错误", "日志", "tty1","tty2","tty3","tty4","tttty5","tty6","tty7","tty8")
