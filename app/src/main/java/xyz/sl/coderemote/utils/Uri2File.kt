@@ -53,14 +53,19 @@ object UriUtils {
      */
     fun documentFileToNode(file: DocumentFile, parent: FileNode?, context: Context): FileNode {
         return if (file.isDirectory) {
-            val dir = FileNode.Directory(file.name?:"Unnamed", parent as? FileNode.Directory, listOf())
+            val dir = FileNode.Directory(
+                file.name?:"Unnamed",
+                parent as? FileNode.Directory,
+                file.uri,
+                listOf()
+            )
             val childrenNodes = file.listFiles().map {
                 documentFileToNode(it, dir, context)
             }
             dir.children = childrenNodes
             dir
         } else {
-            FileNode.File(file.name ?: "Unnamed", parent as? FileNode.Directory)
+            FileNode.File(file.name ?: "Unnamed", parent as? FileNode.Directory, file.uri)
         }
     }
 }

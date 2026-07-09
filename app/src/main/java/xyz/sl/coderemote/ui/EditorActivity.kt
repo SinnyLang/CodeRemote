@@ -195,7 +195,7 @@ fun UiEditor(
                         onSaveReady(saveFunction)
                     }
 
-                    // 组件销毁时自动保存（可选）
+                    // 组件销毁时自动保存
                     DisposableEffect(fileUri) {
                         onDispose {
                             // 如果需要在关闭时自动保存，可以在这里调用

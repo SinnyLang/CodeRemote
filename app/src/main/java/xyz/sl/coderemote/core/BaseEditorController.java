@@ -15,7 +15,6 @@ import java.util.List;
 
 import xyz.sl.coderemote.MainActivity;
 import xyz.sl.coderemote.utils.CacheEditFile;
-import xyz.sl.coderemote.utils.EditFileManger;
 
 public class BaseEditorController implements EditorController{
     private final Cursor cursor;

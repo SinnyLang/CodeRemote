@@ -19,6 +19,7 @@ appcompat = "1.7.1"
 material = "1.13.0"
 piecetable = "0.5.10"
 termlib = "0.0.38"
+material3 = "1.4.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -46,6 +47,7 @@ mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 termlib = { module = "org.connectbot:termlib", version.ref = "termlib" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 #piecetable = { module = "com.mammb:piecetable", version.ref = "piecetable" }
 
 [plugins]

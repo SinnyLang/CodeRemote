@@ -8,22 +8,29 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -60,7 +67,7 @@ class ProjectRootActivity : ComponentActivity() {
         uri =  Uri.parse(uriStr)
         try {
             projectFileRoot = listOf(
-                uriToFileNode(this, uri)
+                uriToFileNode(this.application, uri)
             )
         } catch (e: IllegalArgumentException) {
             Log.e(debugTag, "解析uri失败 返回null", e)
@@ -147,6 +154,7 @@ class ProjectRootViewModel : ViewModel() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UiProjectRoot(
     projectFileRoot: List<FileNode> = listOf(),
@@ -166,7 +174,14 @@ fun UiProjectRoot(
     )
 
 //    val imeBottomDp = with(LocalDensity.current) { WindowInsets.ime.getBottom(this).toDp() }
+
+    // 记住 UiEditor 中保存文件的函数
     var saveCurrentFile by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    // 长按目录或文件，弹出菜单选项
+    var selectedNode by remember { mutableStateOf<FileNode?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var onLongClick = fun (fileNode: FileNode){ selectedNode = fileNode }
 
     ModalNavigationDrawer(
         drawerContent = {
@@ -181,9 +196,10 @@ fun UiProjectRoot(
                     vm.recentUri,
                     onCloseFileItem = { uri: Uri ->
                         // 如果当前编辑的文件是要移除的文件，先保存
-                        if (vm.currentUri == uri) {
-                            saveCurrentFile?.invoke()
-                        }
+                        //    UiEditor 监听 currentUri 变化，会自动保存文件。这里会重复保存
+//                        if (vm.currentUri == uri) {
+//                            saveCurrentFile?.invoke()
+//                        }
 
                         // 移除文件
                         vm.delRecentFile(uri)
@@ -202,7 +218,8 @@ fun UiProjectRoot(
                                 scope.launch {
                                     expandDrawer.close()
                                 }
-                            }
+                            },
+                            onLongClick = onLongClick
                         )
                     }
                 }
@@ -257,6 +274,42 @@ fun UiProjectRoot(
             modifier = Modifier.padding(horizontal = 0.dp, vertical = 10.dp)
         ) {
             Icon(Icons.Default.Menu, contentDescription = "menu")
+        }
+    }
+
+    // 抽屉效果的菜单选项
+    if (selectedNode != null) {
+        ModalBottomSheet(
+            onDismissRequest = { selectedNode = null },
+            sheetState = sheetState
+        ) {
+            when(val node = selectedNode) {
+
+                is FileNode.File -> {
+                    Text("文件：${node.name}")
+                    ListItem(
+                        headlineContent = { Text("重命名") },
+                        modifier = Modifier.clickable {
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text("删除") }
+                    )
+                }
+
+                is FileNode.Directory -> {
+                    Text("目录：${node.name}")
+                    ListItem(
+                        headlineContent = { Text("新建文件") }
+                    )
+                    ListItem(
+                        headlineContent = { Text("删除目录") }
+                    )
+                }
+                null -> {}
+
+            }
+            Spacer(Modifier.height(30.dp))
         }
     }
 }

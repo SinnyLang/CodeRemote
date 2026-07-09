@@ -1,7 +1,8 @@
 package xyz.sl.coderemote.ui
 
+import android.net.Uri
 import android.util.Log
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,14 +28,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
-sealed class FileNode(var name: String, var parent: Directory?) {
-    class File(name: String, parent: Directory?) : FileNode(name, parent)
+sealed class FileNode(var name: String, var parent: Directory?, var uri: Uri) {
+    class File(name: String, parent: Directory?, uri: Uri) : FileNode(name, parent, uri)
     class Directory(
         name: String,
         parent: Directory?,
+        uri: Uri,
         var children: List<FileNode>,
         var isExpanded: MutableState<Boolean> = mutableStateOf(false)
-    ) : FileNode(name, parent)
+    ) : FileNode(name, parent, uri)
 }
 
 fun doNothing(){}
@@ -44,18 +46,27 @@ fun UiFileTreeView(
     nodes: List<FileNode>,
     indent: Int = 0,
     onFileClick: (file: FileNode) -> Unit = {},
-    afterFileClick: ()->Unit = {}
+    afterFileClick: ()->Unit = {},
+    onLongClick: (FileNode) -> Unit = {}
 ) {
     Column (
         modifier = Modifier.fillMaxWidth()
     ) {
         nodes.forEach { node ->
             when (node) {
-                is FileNode.File -> UiFileExplorerItemOfFile(node, indent, onFileClick, afterFileClick)
+                is FileNode.File ->
+                    UiFileExplorerItemOfFile(node, indent, onFileClick, afterFileClick, onLongClick)
+
                 is FileNode.Directory -> {
-                    UiFileExplorerItemOfDirectory(node, indent)
+                    UiFileExplorerItemOfDirectory(node, indent, onLongClick = onLongClick)
                     if (node.isExpanded.value) {
-                        UiFileTreeView(node.children, indent + 1, onFileClick)
+                        UiFileTreeView(
+                            node.children,
+                            indent + 1,
+                            onFileClick,
+                            afterFileClick,
+                            onLongClick
+                        )
                     }
                 }
             }
@@ -69,17 +80,23 @@ fun UiFileExplorerItemOfFile(
     file: FileNode,
     indent: Int,
     onFileClick: (file: FileNode) -> Unit,
-    afterFileClick: () -> Unit = {}
+    afterFileClick: () -> Unit = {},
+    onLongClick: (FileNode) -> Unit = {}
 ){
     Row (
         modifier = Modifier
             .padding(horizontal = (indent * 16).dp, vertical = 4.dp)
             .fillMaxSize()
             .height(20.dp)
-            .clickable {
-                onFileClick(file)
-                afterFileClick()
-            }
+            .combinedClickable(
+                onClick = {
+                    onFileClick(file)
+                    afterFileClick()
+                },
+                onLongClick = {
+                    onLongClick(file)
+                }
+            )
     ) {
         Spacer(modifier = Modifier.width(4.dp))
         Icon(Icons.Default.InsertDriveFile, contentDescription = "")
@@ -89,16 +106,25 @@ fun UiFileExplorerItemOfFile(
 }
 
 @Composable
-fun UiFileExplorerItemOfDirectory(dir: FileNode.Directory, indent: Int){
+fun UiFileExplorerItemOfDirectory(
+    dir: FileNode.Directory,
+    indent: Int,
+    onLongClick: (FileNode) -> Unit = {}
+){
     Row (
         modifier = Modifier
             .padding(horizontal = (indent * 16).dp, vertical = 4.dp)
             .fillMaxWidth()
             .height(20.dp)
-            .clickable {
-                dir.isExpanded.value = !dir.isExpanded.value
-                Log.i("UiFileExplorer", "expand dir " + dir.name)
-            }
+            .combinedClickable(
+                onClick = {
+                    dir.isExpanded.value = !dir.isExpanded.value
+                    Log.i("UiFileExplorer", "expand dir " + dir.name)
+                },
+                onLongClick = {
+                    onLongClick(dir)
+                }
+            )
     ) {
         val icon = if (dir.isExpanded.value) Icons.Default.ExpandMore else Icons.Default.ChevronRight
         Icon(imageVector = icon, contentDescription = "expend/collapse")
@@ -110,13 +136,14 @@ fun UiFileExplorerItemOfDirectory(dir: FileNode.Directory, indent: Int){
 }
 
 fun sampleFiles(): FileNode.Directory {
-    val src = FileNode.Directory("src", null, listOf())
-    val readme = FileNode.File("README.md", null)
-    val main = FileNode.Directory("main", src, listOf())
-    val test = FileNode.Directory("test", src, listOf())
-    val MainActivity = FileNode.File("MainActivity.kt", main)
-    val Utils = FileNode.File("Utils.kt", main)
-    val MainActivityTest = FileNode.File("MainActivityTest.kt", test)
+    val uri = Uri.EMPTY
+    val src = FileNode.Directory("src", null, uri,listOf())
+    val readme = FileNode.File("README.md", null, uri)
+    val main = FileNode.Directory("main", src, uri, listOf())
+    val test = FileNode.Directory("test", src, uri, listOf())
+    val MainActivity = FileNode.File("MainActivity.kt", main, uri)
+    val Utils = FileNode.File("Utils.kt", main, uri)
+    val MainActivityTest = FileNode.File("MainActivityTest.kt", test, uri)
     src.children = listOf(main, test)
     main.children = listOf(MainActivity, Utils)
     test.children = listOf(MainActivityTest)
