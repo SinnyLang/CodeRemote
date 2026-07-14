@@ -14,7 +14,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloseFullscreen
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ScrollableTabRow
@@ -40,17 +43,26 @@ fun UiOutputPanel(
 ) {
     var selectedTabIndex by remember { mutableStateOf(0) }
     var isPanelVisible by remember { mutableStateOf(true) }
+    var expandedMorePanel by remember { mutableStateOf(false) }
 
     Column (modifier = modifier) {
         // 顶部标签栏
         Row(
             modifier = Modifier.height(30.dp).fillMaxWidth()
         ) {
-            IconButton(
-                modifier = Modifier.background(Color.White).padding(start = 10.dp).width(20.dp),
-                onClick = {isPanelVisible = !isPanelVisible}
+            Row(
+                modifier = Modifier.width(70.dp)
             ) {
-                Icon(Icons.Default.MoreVert, contentDescription = "")
+                IconButton(
+                    modifier = Modifier.background(Color.White).padding(start = 10.dp).width(20.dp),
+                    onClick = {isPanelVisible = !isPanelVisible}
+                ) {
+                    Icon(Icons.Default.CloseFullscreen, contentDescription = "")
+                }
+                UiMoreMenuButton(listOf(
+                    OptionItem("1", {}),
+                    OptionItem("2", {})
+                ))
             }
             ScrollableTabRow(
                 selectedTabIndex = selectedTabIndex,
