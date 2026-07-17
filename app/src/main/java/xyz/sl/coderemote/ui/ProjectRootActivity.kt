@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,20 +46,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import xyz.sl.coderemote.MainActivity
+import xyz.sl.coderemote.ui.dialog.DangerConfirmDialog
+import xyz.sl.coderemote.ui.dialog.TextInputDialog
 import xyz.sl.coderemote.utils.UriUtils.findFileUri
-import xyz.sl.coderemote.utils.UriUtils.uriToFileNode
 
 var debugTag : String = "ProjectRootActivity"
 
 class ProjectRootActivity : ComponentActivity() {
 
-    private var projectFileRoot: List<FileNode> = listOf()
     private var uri : Uri = Uri.EMPTY
 
     private val vm : ProjectRootViewModel by viewModels()
+    private lateinit var fileTreeVM : FileTreeViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,9 +69,10 @@ class ProjectRootActivity : ComponentActivity() {
         val uriStr = intent.getStringExtra("uri")
         uri =  Uri.parse(uriStr)
         try {
-            projectFileRoot = listOf(
-                uriToFileNode(this.application, uri)
-            )
+            fileTreeVM = ViewModelProvider(
+                this,
+                FileTreeViewModelFactory(MainActivity.editFileManger, uri)
+            ).get(FileTreeViewModel::class.java)
         } catch (e: IllegalArgumentException) {
             Log.e(debugTag, "解析uri失败 返回null", e)
             Toast.makeText(this, "目录或文件不存在", Toast.LENGTH_SHORT).show()
@@ -98,7 +102,7 @@ class ProjectRootActivity : ComponentActivity() {
 
         setContent {
             UiProjectRoot(
-                projectFileRoot,
+                fileTreeVM,
                 onDrawerFileItemClick = onDrawerFileItemClick,
             )
         }
@@ -157,10 +161,14 @@ class ProjectRootViewModel : ViewModel() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UiProjectRoot(
-    projectFileRoot: List<FileNode> = listOf(),
+    fileTreeViewModel: FileTreeViewModel,
     onDrawerFileItemClick: (file: FileNode) -> Unit = {},
     vm: ProjectRootViewModel = viewModel()
 ) {
+    val fileTree by fileTreeViewModel.fileTree.collectAsState()
+    val fileTreeError by fileTreeViewModel.error.collectAsState()
+    val isFileTreeLoading by fileTreeViewModel.isLoading.collectAsState()
+
     val expandDrawer = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -211,7 +219,7 @@ fun UiProjectRoot(
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item {
                         UiFileTreeView(
-                            projectFileRoot,
+                            fileTree,
                             onFileClick = onDrawerFileItemClick,
                             afterFileClick = {
                                 // TODO: 点击file item之后，不能成功收起侧边栏
@@ -277,6 +285,13 @@ fun UiProjectRoot(
         }
     }
 
+
+    // 各个对话框的显示状态
+    var showNewFileDialog by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var showNewDirDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+
     // 抽屉效果的菜单选项
     if (selectedNode != null) {
         ModalBottomSheet(
@@ -286,24 +301,46 @@ fun UiProjectRoot(
             when(val node = selectedNode) {
 
                 is FileNode.File -> {
-                    Text("文件：${node.name}")
+                    Text("  文件：${node.name}")
                     ListItem(
                         headlineContent = { Text("重命名") },
                         modifier = Modifier.clickable {
+                            showRenameDialog = !showRenameDialog
                         }
                     )
                     ListItem(
-                        headlineContent = { Text("删除") }
+                        headlineContent = { Text("删除") },
+                        modifier = Modifier.clickable {
+                            showDeleteConfirmDialog = !showDeleteConfirmDialog
+                        }
                     )
                 }
 
                 is FileNode.Directory -> {
                     Text("目录：${node.name}")
                     ListItem(
-                        headlineContent = { Text("新建文件") }
+                        headlineContent = { Text("新建文件") },
+                        modifier = Modifier.clickable {
+                            showNewFileDialog = !showNewFileDialog
+                        }
                     )
                     ListItem(
-                        headlineContent = { Text("删除目录") }
+                        headlineContent = { Text("新建目录") },
+                        modifier = Modifier.clickable {
+                            showNewDirDialog = !showNewDirDialog
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text("重命名") },
+                        modifier = Modifier.clickable {
+                            showRenameDialog = !showRenameDialog
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text("删除目录") },
+                        modifier = Modifier.clickable {
+                            showDeleteConfirmDialog = !showDeleteConfirmDialog
+                        }
                     )
                 }
                 null -> {}
@@ -312,6 +349,127 @@ fun UiProjectRoot(
             Spacer(Modifier.height(30.dp))
         }
     }
+
+    // ========== 对话框区域（放在 ModalBottomSheet 外面） ==========
+
+//    var selectedNode
+
+    // 重命名对话框
+    if (showRenameDialog && selectedNode != null) {
+        TextInputDialog(
+            title = "重命名",
+            initialValue = selectedNode?.name ?: "",
+            label = "新名称",
+            confirmText = "重命名",
+            onDismiss = {
+                showRenameDialog = false
+                selectedNode = null
+            },
+            onConfirm = { newName ->
+                try {
+                    when (val node = selectedNode) {
+                        is FileNode.File -> {
+                            fileTreeViewModel.renameFile(node.uri, newName)
+                        }
+                        is FileNode.Directory -> {
+                            fileTreeViewModel.renameFile(node.uri, newName)
+                        }
+                        else -> {}
+                    }
+                    showRenameDialog = false
+                    selectedNode = null
+                } catch (e: Exception) {
+                    // 处理错误
+                }
+            }
+        )
+    }
+
+    // 新建文件对话框
+    if (showNewFileDialog && selectedNode is FileNode.Directory) {
+        TextInputDialog(
+            title = "新建文件",
+            initialValue = "",
+            label = "文件名",
+            placeholder = "请输入文件名",
+            confirmText = "创建",
+            onDismiss = {
+                showNewFileDialog = false
+                selectedNode = null
+            },
+            onConfirm = { fileName ->
+                try {
+                    val dir = selectedNode as FileNode.Directory
+                    fileTreeViewModel.createFile(dir.uri, fileName)
+                    showNewFileDialog = false
+                    selectedNode = null
+                } catch (e: Exception) {
+                    Log.e(debugTag, e.message, e)
+                }
+            }
+        )
+    }
+
+    // 新建目录对话框
+    if (showNewDirDialog && selectedNode is FileNode.Directory) {
+        TextInputDialog(
+            title = "新建目录",
+            initialValue = "",
+            label = "目录名",
+            placeholder = "请输入目录名",
+            confirmText = "创建",
+            onDismiss = {
+                showNewDirDialog = false
+                selectedNode = null
+            },
+            onConfirm = { dirName ->
+                try {
+                    val dir = selectedNode as FileNode.Directory
+                    fileTreeViewModel.createDirectory(dir.uri, dirName)
+                    showNewDirDialog = false
+                    selectedNode = null
+                } catch (e: Exception) {
+                    // 处理错误
+                    Log.e(debugTag, e.message, e)
+                }
+            }
+        )
+    }
+
+    // 删除确认对话框
+    if (showDeleteConfirmDialog && selectedNode != null) {
+        DangerConfirmDialog(
+            title = "确认删除",
+            message = when (selectedNode) {
+                is FileNode.File -> "确定要删除文件 \"${selectedNode?.name}\" 吗？\n此操作不可恢复。"
+                is FileNode.Directory -> "确定要删除目录 \"${selectedNode?.name}\" 及其所有内容吗？\n此操作不可恢复。"
+                else -> ""
+            },
+            confirmText = "删除",
+            onDismiss = {
+                showDeleteConfirmDialog = false
+                selectedNode = null
+            },
+            onConfirm = {
+                try {
+                    when (val node = selectedNode) {
+                        is FileNode.File -> {
+                            fileTreeViewModel.deleteNode(node.uri, false)
+                        }
+                        is FileNode.Directory -> {
+                            fileTreeViewModel.deleteNode(node.uri, true)
+                        }
+                        else -> {}
+                    }
+                    showDeleteConfirmDialog = false
+                    selectedNode = null
+                } catch (e: Exception) {
+                    // 处理错误
+                }
+            }
+        )
+    }
+
 }
 
 @Preview(backgroundColor = 0x888888)
@@ -319,8 +477,49 @@ fun UiProjectRoot(
 fun PreviewUiProjectRoot() {
     MainActivity.setEditFileMangerForUiPreview(LocalContext.current)
 
-    val sampleData = listOf(
-        sampleFiles()
-    )
-    UiProjectRoot(sampleData)
+    val sampleData : List<FileNode> = listOf(sampleFiles())
+    val previewData = remember { PreviewFileTreeViewModel(sampleData) }
+
+    UiProjectRoot(previewData)
+}
+
+// 预览专用的 ViewModel
+class PreviewFileTreeViewModel(
+    private val mockData: List<FileNode> = emptyList()
+) : FileTreeViewModel(
+    fileManager = MainActivity.editFileManger, // 不会被使用
+    rootUri = Uri.EMPTY
+) {
+    init {
+        // 初始化时直接设置模拟数据
+        _fileTree.value = mockData
+        _isLoading.value = false
+        _error.value = null
+    }
+
+    // 覆盖加载方法，不执行任何 I/O 操作
+    override fun loadFileTree() {
+        // 预览模式不执行任何操作
+        _isLoading.value = false
+    }
+
+    override fun refresh() {
+        // 预览模式不执行任何操作
+    }
+
+    override fun createFile(parentUri: Uri, fileName: String): Result<Uri> {
+        return Result.success(Uri.EMPTY)
+    }
+
+    override fun createDirectory(parentUri: Uri, dirName: String): Result<Uri> {
+        return Result.success(Uri.EMPTY)
+    }
+
+    override fun renameFile(uri: Uri, newName: String): Result<Unit> {
+        return Result.success(Unit)
+    }
+
+    override fun deleteNode(uri: Uri, isDirectory: Boolean): Result<Unit> {
+        return Result.success(Unit)
+    }
 }
