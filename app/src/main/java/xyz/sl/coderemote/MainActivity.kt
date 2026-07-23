@@ -6,20 +6,21 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 
 import xyz.sl.coderemote.ui.StartProjectActivity
-import xyz.sl.coderemote.utils.EditFileManger
+import xyz.sl.coderemote.utils.BaseFileManager
+import xyz.sl.coderemote.utils.LocalFileManger
 
 class MainActivity : ComponentActivity() {
 
     companion object {
-        lateinit var editFileManger: EditFileManger
+        lateinit var fileManger: BaseFileManager
             private set
 
         // !!! NOTE: this method is called only in Ui Preview
         fun setEditFileMangerForUiPreview(){
-            editFileManger = EditFileManger(null)
+            fileManger = LocalFileManger(null)
         }
         fun setEditFileMangerForUiPreview(context: Context){
-            editFileManger = EditFileManger(context)
+            fileManger = LocalFileManger(context)
         }
     }
 
@@ -27,7 +28,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // 1. 创建全局 EditFileManger 对象，用于管理文件
-        editFileManger = EditFileManger(this.application.applicationContext)
+        fileManger = LocalFileManger(this.application.applicationContext)
 
         // 2. 启动 App 程序
         startActivity(Intent(this, StartProjectActivity::class.java))

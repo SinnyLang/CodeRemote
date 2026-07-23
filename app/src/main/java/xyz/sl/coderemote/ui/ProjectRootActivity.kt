@@ -71,7 +71,7 @@ class ProjectRootActivity : ComponentActivity() {
         try {
             fileTreeVM = ViewModelProvider(
                 this,
-                FileTreeViewModelFactory(MainActivity.editFileManger, uri)
+                FileTreeViewModelFactory(MainActivity.fileManger, uri)
             ).get(FileTreeViewModel::class.java)
         } catch (e: IllegalArgumentException) {
             Log.e(debugTag, "解析uri失败 返回null", e)
@@ -487,7 +487,7 @@ fun PreviewUiProjectRoot() {
 class PreviewFileTreeViewModel(
     private val mockData: List<FileNode> = emptyList()
 ) : FileTreeViewModel(
-    fileManager = MainActivity.editFileManger, // 不会被使用
+    fileManager = MainActivity.fileManger, // 不会被使用
     rootUri = Uri.EMPTY
 ) {
     init {

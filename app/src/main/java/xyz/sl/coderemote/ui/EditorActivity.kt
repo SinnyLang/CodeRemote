@@ -127,7 +127,7 @@ fun UiEditor(
     var textStyle = LocalTextStyle.current.copy(fontSize = 20.sp)
 
     var isOpeningFile : Boolean = remember( fileUri ) { !Uri.EMPTY.equals(fileUri) }
-    var fileName : String = MainActivity.editFileManger.getFileNameFromUri(fileUri)
+    var fileName : String = MainActivity.fileManger.getFileNameFromUri(fileUri)
 
     Scaffold(
         modifier = modifier,
@@ -169,7 +169,7 @@ fun UiEditor(
                     // TODO : 当前：文件打开异常会将异常信息显示到编辑区
                     //        应该：文件打开异常，捕捉异常然后使用Text等组件展示
                     val content = remember(fileUri) {
-                        MainActivity.editFileManger.readTextFromUri(fileUri)
+                        MainActivity.fileManger.readTextFromUri(fileUri)
                     }
                     val controllerViewModel: TextEditorControllerViewModel = viewModel(
                         key = fileUri.toString(),  // 绑定到 fileUri
@@ -182,7 +182,7 @@ fun UiEditor(
                     val saveCurrentFile: () -> Unit = {
                         try {
                             val currentText = controllerViewModel.controller.text.toString()
-                            MainActivity.editFileManger.writeTextToUri(fileUri, currentText)
+                            MainActivity.fileManger.writeTextToUri(fileUri, currentText)
                             Log.i("UiEditor", "File saved: $fileUri")
                         } catch (e: IOException) {
                             Log.e("UiEditor", "Save failed", e)

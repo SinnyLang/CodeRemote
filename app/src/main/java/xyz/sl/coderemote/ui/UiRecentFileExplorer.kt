@@ -25,7 +25,7 @@ fun UiRecentFileExplorer(
 ){
     Column {
         recentFileUri.forEach { fileUriItem ->
-            val fileItemName:String = MainActivity.editFileManger.getFileNameFromUri(fileUriItem)
+            val fileItemName:String = MainActivity.fileManger.getFileNameFromUri(fileUriItem)
             NavigationDrawerItem(
                 label = {
                     Row {

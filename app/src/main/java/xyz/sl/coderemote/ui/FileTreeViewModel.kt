@@ -10,13 +10,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import xyz.sl.coderemote.utils.EditFileManger
+import xyz.sl.coderemote.utils.BaseFileManager
 
 open class FileTreeViewModel(
-    private val fileManager: EditFileManger,
+    private val fileManager: BaseFileManager,
     private val rootUri: Uri
 ) : ViewModel() {
-    // ⭐ 预览专用：直接设置数据，不执行真实加载
+    /**
+     *  预览专用设置方法：直接设置数据，不执行真实加载
+     */
     fun setPreviewData(nodes: List<FileNode>) {
         _fileTree.value = nodes
         _isLoading.value = false
@@ -118,7 +120,7 @@ open class FileTreeViewModel(
 }
 
 class FileTreeViewModelFactory(
-    private val fileManager: EditFileManger,
+    private val fileManager: BaseFileManager,
     private val rootUri : Uri
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

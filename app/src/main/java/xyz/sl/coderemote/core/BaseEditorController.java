@@ -31,7 +31,7 @@ public class BaseEditorController implements EditorController{
 
     // ------------- BaseEditorController -----------------
     public BaseEditorController(Uri uri) throws IOException {
-        cache = MainActivity.Companion.getEditFileManger().getCacheFile(uri);
+        cache = MainActivity.Companion.getFileManger().getCacheFile(uri);
         textPath = cache.getCacheFile().toPath();
 
         cursor = new Cursor(0, 0);
@@ -41,7 +41,7 @@ public class BaseEditorController implements EditorController{
     }
 
     public BaseEditorController(String text) throws IOException {
-        cache = MainActivity.Companion.getEditFileManger().getCacheFileEmpty();
+        cache = MainActivity.Companion.getFileManger().getCacheFileEmpty();
         textPath = cache.getCacheFile().toPath();
 
         cursor = new Cursor(0, 0);
