@@ -30,7 +30,7 @@ public class SSHConnectTest {
     SshManager sshManagerWin;
 
     @Before
-    public void connect(){
+    public void connect() throws Exception {
         sshManagerLinux = new SshManager();
         sshManagerLinux.connect(hostLinux, portLinux, nameLinux, passwordLinux);
         assertTrue(sshManagerLinux.isConnected());
@@ -52,11 +52,11 @@ public class SSHConnectTest {
     @Test
     public void testRemoteFile(){
         System.out.println("======== Test Remote File =========");
-        String files1 = sshManagerWin.listFiles(sshManagerWin.userPath());
+        String files1 = String.valueOf(sshManagerWin.listFiles(sshManagerWin.userPath()));
         System.out.println(files1);
 
         System.out.println("======== Test Remote File =========");
-        String files2 = sshManagerLinux.listFiles(sshManagerLinux.userPath());
+        String files2 = String.valueOf(sshManagerLinux.listFiles(sshManagerLinux.userPath()));
         System.out.println(files2);
     }
 

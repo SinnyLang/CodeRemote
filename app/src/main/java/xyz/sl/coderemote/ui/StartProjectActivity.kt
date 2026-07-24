@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -13,9 +14,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,18 +38,26 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import xyz.sl.coderemote.core.DataStoreHistoryFiles
 import xyz.sl.coderemote.core.HistoryFilesStorage
+import xyz.sl.coderemote.ui.dialog.SSHConnectionDialog
 import xyz.sl.coderemote.ui.theme.TextEditorComposeTheme
+import xyz.sl.coderemote.utils.SshManager
+
+val tag = "StartProjectActivity"
 
 class StartProjectActivity: ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            UiStartProject (
-                onClickLocal = {
-                    startActivity(Intent(this, ProjectRootActivity::class.java))
-                    finish()
-                }
-            )
+            TextEditorComposeTheme(
+                useDarkTheme = true
+            ){
+                UiStartProject (
+                    onClickLocal = {
+                        startActivity(Intent(this, ProjectRootActivity::class.java))
+                        finish()
+                    }
+                )
+            }
         }
     }
 }
@@ -96,6 +114,7 @@ fun UiStartProject(onClickLocal: () -> Unit){
             }
         }
 
+    var showSSHDialog by remember { mutableStateOf(false) }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -104,7 +123,8 @@ fun UiStartProject(onClickLocal: () -> Unit){
             .padding(top = Dp(200f))
     ) {
         Button(
-            onClick = {}, Modifier.width(Dp(300f))
+            onClick = { showSSHDialog = !showSSHDialog},
+            Modifier.width(Dp(300f))
         ) { Text("Start From Remote with SSH") }
 
         Row {
@@ -123,6 +143,29 @@ fun UiStartProject(onClickLocal: () -> Unit){
         Button(
             onClick = {}, Modifier.width(Dp(300f))
         ) { Text("Start From history") }
+    }
+
+
+    val onConnectClicked = { host: String, port: String, username: String, password: String ->
+        // 1. 连接主机
+        var sshManager = SshManager()
+        sshManager.connect(host, port.toInt(), username, password)
+        if (!sshManager.isConnected) {
+            Log.e(tag, "主机连接失败")
+            throw Exception("主机连接失败")
+        }
+        // 2. 选择工作目录
+
+        // 3. 跳转页面
+
+    }
+
+
+    if (showSSHDialog) {
+        SSHConnectionDialog(
+            onDismiss = { showSSHDialog =! showSSHDialog },
+            onConnectButtonClicked = onConnectClicked
+        )
     }
 }
 

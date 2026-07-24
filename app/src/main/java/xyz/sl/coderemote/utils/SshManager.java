@@ -5,6 +5,7 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpException;
 import com.jcraft.jsch.SftpProgressMonitor;
@@ -15,8 +16,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Properties;
-import java.util.stream.Stream;
 
 public class SshManager {
     private Session session;
@@ -26,7 +28,7 @@ public class SshManager {
     /**
      * 连接 SSH（密码认证）
      */
-    public boolean connect(String host, int port, String username, String password) {
+    public boolean connect(String host, int port, String username, String password) throws Exception {
         try {
             JSch jsch = new JSch();
 
@@ -50,12 +52,12 @@ public class SshManager {
             channelShell.connect(30_000);
 
             return true;
-        } catch (Exception e) {
+        } catch (JSchException e) {
             e.printStackTrace();
             session = null;
             channelSftp = null;
             channelShell = null;
-            return false;
+            throw new Exception(e);
         }
     }
 
@@ -205,17 +207,41 @@ public class SshManager {
      * 列出目录内容
      */
     @SuppressWarnings("unchecked")
-    public String listFiles(String remotePath) {
+    public List<String> listFiles(String remotePath) {
         try {
             java.util.Vector<ChannelSftp.LsEntry> files = channelSftp.ls(remotePath);
-            StringBuilder result = new StringBuilder();
-            for (ChannelSftp.LsEntry entry : files) {
-                result.append(entry.getFilename()).append("\n");
+//            StringBuilder result = new StringBuilder();
+//            for (ChannelSftp.LsEntry entry : files) {
+//                result.append(entry.getFilename()).append("\n");
+//            }
+//            return result.toString();
+            List<String> fileList = new LinkedList<>();
+            for (ChannelSftp.LsEntry e : files) {
+                fileList.add(e.getFilename());
             }
-            return result.toString();
+            return fileList;
         } catch (SftpException e) {
             e.printStackTrace();
-            return null;
+            return List.of();
+        }
+    }
+
+    /**
+     * 列出目录中的文件夹
+     */
+    @SuppressWarnings("unchecked")
+    public List<String> listDirectoryFiles(String remotePath) {
+        try {
+            java.util.Vector<ChannelSftp.LsEntry> files = channelSftp.ls(remotePath);
+            List<String> fileList = new LinkedList<>();
+            for (ChannelSftp.LsEntry e : files) {
+                if (e.getAttrs().isDir())
+                    fileList.add(e.getFilename());
+            }
+            return fileList;
+        } catch (SftpException e) {
+            e.printStackTrace();
+            return List.of();
         }
     }
 
