@@ -38,7 +38,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import xyz.sl.coderemote.core.DataStoreHistoryFiles
 import xyz.sl.coderemote.core.HistoryFilesStorage
-import xyz.sl.coderemote.ui.dialog.SSHConnectionDialog
+import xyz.sl.coderemote.ui.dialog.SSHSelectDirectoryStepDialog
 import xyz.sl.coderemote.ui.theme.TextEditorComposeTheme
 import xyz.sl.coderemote.utils.SshManager
 
@@ -162,9 +162,9 @@ fun UiStartProject(onClickLocal: () -> Unit){
 
 
     if (showSSHDialog) {
-        SSHConnectionDialog(
+        SSHSelectDirectoryStepDialog(
             onDismiss = { showSSHDialog =! showSSHDialog },
-            onConnectButtonClicked = onConnectClicked
+            onResult = {p1,p2->}
         )
     }
 }
