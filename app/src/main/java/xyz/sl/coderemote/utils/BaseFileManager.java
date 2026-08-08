@@ -4,6 +4,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Environment;
 import android.provider.OpenableColumns;
 import android.util.Log;
 
@@ -18,7 +19,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -34,12 +34,17 @@ import xyz.sl.coderemote.ui.FileNode;
 public abstract class BaseFileManager {
     protected final Context context;
     protected final File cacheDir;
+    protected final File fileDir;
 
     public BaseFileManager(Context context) {
         this.context = context.getApplicationContext();
         this.cacheDir = new File(context.getExternalCacheDir(), "file_cache");
+        this.fileDir = new File(context.getExternalFilesDir(null), "remote_projects");
         if (!cacheDir.exists()) {
             cacheDir.mkdirs();
+        }
+        if (!fileDir.exists()) {
+            fileDir.mkdirs();
         }
     }
 

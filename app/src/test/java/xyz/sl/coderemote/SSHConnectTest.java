@@ -6,14 +6,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import xyz.sl.coderemote.utils.SshManager;
+import xyz.sl.coderemote.utils.SshClient;
 
 public class SSHConnectTest {
     String hostLinux = BuildConfig.SSH_LINUX_HOST;
@@ -26,37 +24,37 @@ public class SSHConnectTest {
     String nameWin = BuildConfig.SSH_WIN_USER;
     String passwordWin = BuildConfig.SSH_WIN_PASSWORD;
 
-    SshManager sshManagerLinux;
-    SshManager sshManagerWin;
+    SshClient sshClientLinux;
+    SshClient sshClientWin;
 
     @Before
     public void connect() throws Exception {
-        sshManagerLinux = new SshManager();
-        sshManagerLinux.connect(hostLinux, portLinux, nameLinux, passwordLinux);
-        assertTrue(sshManagerLinux.isConnected());
+        sshClientLinux = new SshClient();
+        sshClientLinux.connect(hostLinux, portLinux, nameLinux, passwordLinux);
+        assertTrue(sshClientLinux.isConnected());
 
-        sshManagerWin = new SshManager();
-        sshManagerWin.connect(hostWin, portWin, nameWin, passwordWin);
-        assertTrue(sshManagerWin.isConnected());
+        sshClientWin = new SshClient();
+        sshClientWin.connect(hostWin, portWin, nameWin, passwordWin);
+        assertTrue(sshClientWin.isConnected());
     }
 
     @After
     public void disconnect(){
-        sshManagerLinux.disconnect();
-        assertFalse(sshManagerLinux.isConnected());
+        sshClientLinux.disconnect();
+        assertFalse(sshClientLinux.isConnected());
 
-        sshManagerWin.disconnect();
-        assertFalse(sshManagerWin.isConnected());
+        sshClientWin.disconnect();
+        assertFalse(sshClientWin.isConnected());
     }
 
     @Test
     public void testRemoteFile(){
         System.out.println("======== Test Remote File =========");
-        String files1 = String.valueOf(sshManagerWin.listFiles(sshManagerWin.userPath()));
+        String files1 = String.valueOf(sshClientWin.listFiles(sshClientWin.userPath()));
         System.out.println(files1);
 
         System.out.println("======== Test Remote File =========");
-        String files2 = String.valueOf(sshManagerLinux.listFiles(sshManagerLinux.userPath()));
+        String files2 = String.valueOf(sshClientLinux.listFiles(sshClientLinux.userPath()));
         System.out.println(files2);
     }
 
@@ -64,8 +62,8 @@ public class SSHConnectTest {
     public void testLinuxIOStream(){
         System.out.println("======== Test I/O =========");
         try {
-            InputStream inputStream = sshManagerLinux.getChannelShellInputStream();
-            OutputStream outputStream = sshManagerLinux.getChannelShellOutputStream();
+            InputStream inputStream = sshClientLinux.getChannelShellInputStream();
+            OutputStream outputStream = sshClientLinux.getChannelShellOutputStream();
             readOutput(inputStream);
             // Send commands
             sendCommand(outputStream, "ls -lh");
@@ -91,8 +89,8 @@ public class SSHConnectTest {
     public void testWinIOStream(){
         System.out.println("======== Test I/O =========");
         try {
-            InputStream inputStream = sshManagerWin.getChannelShellInputStream();
-            OutputStream outputStream = sshManagerWin.getChannelShellOutputStream();
+            InputStream inputStream = sshClientWin.getChannelShellInputStream();
+            OutputStream outputStream = sshClientWin.getChannelShellOutputStream();
             readOutput(inputStream);
             // Send commands
             sendCommand(outputStream, "dir");

@@ -28,7 +28,7 @@ import org.connectbot.terminal.Terminal
 import org.connectbot.terminal.TerminalEmulator
 import org.connectbot.terminal.TerminalEmulatorFactory
 import xyz.sl.coderemote.BuildConfig
-import xyz.sl.coderemote.utils.SshManager
+import xyz.sl.coderemote.utils.SshClient
 import java.util.concurrent.CancellationException
 
 /**
@@ -46,7 +46,7 @@ var sshSendTag = "SSH-Send"
 var sshReceiveTag = "SSH-Receive"
 @Composable
 fun SshTerminalScreen(
-    sshManager: SshManager,
+    sshClient: SshClient,
     modifier: Modifier = Modifier
 ) {
     val scopeSend = rememberCoroutineScope()
@@ -61,7 +61,7 @@ fun SshTerminalScreen(
     DisposableEffect(Unit) {
         onDispose {
             try {
-                sshManager.disconnect()
+                sshClient.disconnect()
             } catch (_: Exception) {
             }
         }
@@ -74,7 +74,7 @@ fun SshTerminalScreen(
         /*
          * 打开 shell
          */
-        val channel = sshManager.channelShell
+        val channel = sshClient.channelShell
 
         val shellInput = channel.inputStream
         val shellOutput = channel.outputStream
@@ -175,20 +175,20 @@ fun SshTerminalScreen(
 @Preview
 @Composable
 fun PreviewUiSshTerminalScreen(){
-    val sshManagerWin : SshManager = remember { SshManager() }
-    val sshManagerLinux : SshManager = remember { SshManager() }
+    val sshClientWin : SshClient = remember { SshClient() }
+    val sshClientLinux : SshClient = remember { SshClient() }
     var scope : CoroutineScope = rememberCoroutineScope()
     var connected : Boolean by remember{ mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         scope.launch(Dispatchers.IO){
-            sshManagerWin.connect(
+            sshClientWin.connect(
                 BuildConfig.SSH_WIN_HOST,
                 BuildConfig.SSH_WIN_PORT.toInt(),
                 BuildConfig.SSH_WIN_USER,
                 BuildConfig.SSH_WIN_PASSWORD
             )
-            sshManagerLinux.connect(
+            sshClientLinux.connect(
                 BuildConfig.SSH_LINUX_HOST,
                 BuildConfig.SSH_LINUX_PORT.toInt(),
                 BuildConfig.SSH_LINUX_USER,
@@ -200,9 +200,9 @@ fun PreviewUiSshTerminalScreen(){
 
     if (connected) {
         Column() {
-            SshTerminalScreen(sshManagerWin, Modifier.height(400.dp))
+            SshTerminalScreen(sshClientWin, Modifier.height(400.dp))
             Text("分割线")
-            SshTerminalScreen(sshManagerLinux, Modifier.height(400.dp))
+            SshTerminalScreen(sshClientLinux, Modifier.height(400.dp))
         }
     }
 }

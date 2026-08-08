@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,7 +26,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,13 +39,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import xyz.sl.coderemote.utils.SshManager
+import xyz.sl.coderemote.utils.SshClient
 
 const val tag = "SSHSelectDirectoryStepDialog"
 
+/**
+ *  连接SSH并选择工作目录的流程对话框
+ *  @param onResult 返回连接器和选中目录
+ */
 @Composable
 fun SSHSelectDirectoryStepDialog(
-    onResult: (SshManager?, String) -> Unit, // 返回连接器和选中目录
+    onResult: (SshClient?, String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -58,7 +60,7 @@ fun SSHSelectDirectoryStepDialog(
     var password by remember { mutableStateOf("123") }
 
     // 连接状态
-    var sshClient by remember { mutableStateOf<SshManager?>(null) }
+    var sshClient by remember { mutableStateOf<SshClient?>(null) }
     var isConnecting by remember { mutableStateOf(false) }
     var connectionError by remember { mutableStateOf<String?>(null) }
 
@@ -79,7 +81,7 @@ fun SSHSelectDirectoryStepDialog(
         // 使用协程执行实际连接
         return withContext(Dispatchers.IO) {
             try {
-                val client = SshManager()
+                val client = SshClient()
                 client.connect(host, port.toInt(), username, password)
                 sshClient = client
                 Log.d(tag, "ssh is connected: " + client.isConnected)
@@ -87,7 +89,7 @@ fun SSHSelectDirectoryStepDialog(
                 if (!client.isConnected) throw Exception("连接失败")
 
                 currentPath = "/"
-                dirEntries = client.listDirectoryFiles(currentPath)
+                dirEntries = client.listDirectoryOnly(currentPath)
                 true
             } catch (e: Exception) {
                 Log.e(tag, e.message, e)
@@ -105,7 +107,7 @@ fun SSHSelectDirectoryStepDialog(
         // 使用 IO 线程执行网络操作
         val entries = withContext(Dispatchers.IO) {
             try {
-                sshClient!!.listDirectoryFiles(path)
+                sshClient!!.listDirectoryOnly(path)
             } catch (e: Exception) {
                 // 出错时返回空列表或抛出异常
                 Log.e(tag, e.message, e)
@@ -368,7 +370,7 @@ fun SSHSelectDirectoryStepDialogPreview() {
         Text("选择远程目录")
     }
 
-    var ssh by remember { mutableStateOf<SshManager?>(null) }
+    var ssh by remember { mutableStateOf<SshClient?>(null) }
     var workDir by remember { mutableStateOf("") }
 
     if (showDialog) {

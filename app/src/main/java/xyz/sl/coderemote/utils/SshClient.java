@@ -20,7 +20,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
 
-public class SshManager {
+public class SshClient {
     private Session session;
     private ChannelSftp channelSftp;
     private ChannelShell channelShell;
@@ -230,7 +230,7 @@ public class SshManager {
      * 列出目录中的文件夹
      */
     @SuppressWarnings("unchecked")
-    public List<String> listDirectoryFiles(String remotePath) {
+    public List<String> listDirectoryOnly(String remotePath) {
         try {
             java.util.Vector<ChannelSftp.LsEntry> files = channelSftp.ls(remotePath);
             List<String> fileList = new LinkedList<>();
@@ -348,5 +348,9 @@ public class SshManager {
 
     public OutputStream getChannelShellOutputStream() throws IOException {
         return channelShell.getOutputStream();
+    }
+
+    public String getUser() {
+        return session.getUserName();
     }
 }

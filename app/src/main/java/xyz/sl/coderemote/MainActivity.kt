@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import xyz.sl.coderemote.ui.StartProjectActivity
 import xyz.sl.coderemote.utils.BaseFileManager
 import xyz.sl.coderemote.utils.LocalFileManger
+import xyz.sl.coderemote.utils.SshClient
 
 class MainActivity : ComponentActivity() {
 
@@ -22,6 +23,13 @@ class MainActivity : ComponentActivity() {
         fun setEditFileMangerForUiPreview(context: Context){
             fileManger = LocalFileManger(context)
         }
+
+        fun setFileManger(fileManger: BaseFileManager){
+            Companion.fileManger = fileManger
+        }
+
+        // 每次只能有一个主机上的project被打开
+        var remoteClient: SshClient? = null
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

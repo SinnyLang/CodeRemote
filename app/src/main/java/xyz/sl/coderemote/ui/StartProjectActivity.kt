@@ -14,14 +14,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,16 +28,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import xyz.sl.coderemote.MainActivity
 import xyz.sl.coderemote.core.DataStoreHistoryFiles
 import xyz.sl.coderemote.core.HistoryFilesStorage
 import xyz.sl.coderemote.ui.dialog.SSHSelectDirectoryStepDialog
 import xyz.sl.coderemote.ui.theme.TextEditorComposeTheme
-import xyz.sl.coderemote.utils.SshManager
+import xyz.sl.coderemote.utils.RemoteFileManger
+import xyz.sl.coderemote.utils.SshClient
 
 val tag = "StartProjectActivity"
 
@@ -51,12 +51,7 @@ class StartProjectActivity: ComponentActivity() {
             TextEditorComposeTheme(
                 useDarkTheme = true
             ){
-                UiStartProject (
-                    onClickLocal = {
-                        startActivity(Intent(this, ProjectRootActivity::class.java))
-                        finish()
-                    }
-                )
+                UiStartProject ()
             }
         }
     }
@@ -71,7 +66,7 @@ class FileViewModel(private val storage: HistoryFilesStorage) : ViewModel() {
 }
 
 @Composable
-fun UiStartProject(onClickLocal: () -> Unit){
+fun UiStartProject(){
     val context = LocalContext.current
     val storage = DataStoreHistoryFiles(context)
     val viewModel: FileViewModel = viewModel(
@@ -115,6 +110,27 @@ fun UiStartProject(onClickLocal: () -> Unit){
         }
 
     var showSSHDialog by remember { mutableStateOf(false) }
+    var sshClient by remember { mutableStateOf<SshClient?>(null) }
+    var remoteWorkDir by remember { mutableStateOf("") }
+    LaunchedEffect(remoteWorkDir) {
+        if (sshClient != null && remoteWorkDir.isNotEmpty()) {
+            // 1.创建目录映射
+            MainActivity.setFileManger(
+                RemoteFileManger(context.applicationContext, sshClient, remoteWorkDir)
+            )
+
+            // 2.设置远程主机
+            MainActivity.remoteClient = sshClient
+
+            // 3.跳转到 ProjectRootActivity，同时传递目录映射
+            val intent = Intent(context, ProjectRootActivity::class.java).apply {
+                putExtra("uri", remoteWorkDir)
+            }
+            //TODO: LaunchedEffect 中使用 context 容易引发内存泄漏，需要被替代
+            context.startActivity(intent)
+            (context as? Activity)?.finish()
+        }
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -145,26 +161,10 @@ fun UiStartProject(onClickLocal: () -> Unit){
         ) { Text("Start From history") }
     }
 
-
-    val onConnectClicked = { host: String, port: String, username: String, password: String ->
-        // 1. 连接主机
-        var sshManager = SshManager()
-        sshManager.connect(host, port.toInt(), username, password)
-        if (!sshManager.isConnected) {
-            Log.e(tag, "主机连接失败")
-            throw Exception("主机连接失败")
-        }
-        // 2. 选择工作目录
-
-        // 3. 跳转页面
-
-    }
-
-
     if (showSSHDialog) {
         SSHSelectDirectoryStepDialog(
             onDismiss = { showSSHDialog =! showSSHDialog },
-            onResult = {p1,p2->}
+            onResult = {p1,p2->sshClient=p1; remoteWorkDir = p2}
         )
     }
 }
@@ -175,6 +175,6 @@ fun PreviewUiStartProject(){
     TextEditorComposeTheme(
         useDarkTheme = true
     ) {
-        UiStartProject({})
+        UiStartProject()
     }
 }
