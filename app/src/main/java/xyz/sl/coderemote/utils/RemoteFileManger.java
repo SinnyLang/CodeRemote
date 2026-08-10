@@ -11,8 +11,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 
-import xyz.sl.coderemote.ui.FileNode;
-import xyz.sl.coderemote.ui.UiFileExplorerKt;
+import xyz.sl.coderemote.core.FileNode;
+import xyz.sl.coderemote.ui.FileTreeViewModelKt;
 
 public class RemoteFileManger extends BaseFileManager{
     private SshClient sshClient;
@@ -82,6 +82,6 @@ public class RemoteFileManger extends BaseFileManager{
     @Override
     public @NotNull List<? extends @NotNull FileNode> scanDirectory(@NotNull Uri rootUri) {
 //        List<String> filesName = sshClient.listFiles(rootUri.getPath());
-        return List.of(UiFileExplorerKt.sampleFiles());
+        return List.of(FileTreeViewModelKt.sampleFiles());
     }
 }

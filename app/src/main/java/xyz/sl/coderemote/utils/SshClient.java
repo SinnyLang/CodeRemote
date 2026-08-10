@@ -353,4 +353,11 @@ public class SshClient {
     public String getUser() {
         return session.getUserName();
     }
+
+    public ChannelSftp getChannelSftp(){
+        if (!isConnected()){
+            throw new NullPointerException("Cannot get Channel Shell on null ssh session");
+        }
+        return channelSftp;
+    }
 }

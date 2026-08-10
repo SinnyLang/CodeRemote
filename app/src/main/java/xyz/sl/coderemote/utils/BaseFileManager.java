@@ -4,7 +4,6 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Environment;
 import android.provider.OpenableColumns;
 import android.util.Log;
 
@@ -12,7 +11,6 @@ import androidx.documentfile.provider.DocumentFile;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -26,7 +24,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import xyz.sl.coderemote.ui.FileNode;
+import xyz.sl.coderemote.core.FileNode;
 
 /**
  * BaseFileManager 提供对本地文件的列出、读、写、增、删、重命名操作
@@ -40,12 +38,13 @@ public abstract class BaseFileManager {
         this.context = context.getApplicationContext();
         this.cacheDir = new File(context.getExternalCacheDir(), "file_cache");
         this.fileDir = new File(context.getExternalFilesDir(null), "remote_projects");
-        if (!cacheDir.exists()) {
-            cacheDir.mkdirs();
-        }
-        if (!fileDir.exists()) {
-            fileDir.mkdirs();
-        }
+        // 预览时，初始化BaseFileManager中创建文件夹会导致预览失效
+//        if (!cacheDir.exists()) {
+//            cacheDir.mkdirs();
+//        }
+//        if (!fileDir.exists()) {
+//            fileDir.mkdirs();
+//        }
     }
 
     public CacheEditFile getCacheFileEmpty() throws IOException {
@@ -96,6 +95,10 @@ public abstract class BaseFileManager {
         }
 
         return result; // 未知类型
+    }
+
+    public File getFile(Uri uri){
+        return null;
     }
 
 
@@ -154,6 +157,11 @@ public abstract class BaseFileManager {
         return List.of(UriUtils.INSTANCE.uriToFileNode(context, rootUri));
     }
 
+    public @NotNull List<? extends @NotNull FileNode> listDirectory(@NotNull Uri rootUri) {
+
+
+        return List.of(UriUtils.INSTANCE.uriToFileNode(context, rootUri));
+    }
 
     //===========read========================
     /**

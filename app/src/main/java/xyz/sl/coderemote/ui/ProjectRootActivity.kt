@@ -32,7 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +52,7 @@ import xyz.sl.coderemote.MainActivity
 import xyz.sl.coderemote.ui.dialog.DangerConfirmDialog
 import xyz.sl.coderemote.ui.dialog.TextInputDialog
 import xyz.sl.coderemote.utils.UriUtils.findFileUri
+import xyz.sl.coderemote.core.FileNode
 
 var debugTag : String = "ProjectRootActivity"
 
@@ -68,14 +68,25 @@ class ProjectRootActivity : ComponentActivity() {
 
         val uriStr = intent.getStringExtra("uri")
         uri =  Uri.parse(uriStr)
+
         try {
             fileTreeVM = ViewModelProvider(
                 this,
-                FileTreeViewModelFactory(MainActivity.fileManger, uri)
+                FileTreeViewModelFactory(
+                    MainActivity.fileManger,
+                    MainActivity.resourceManager.resolve(uri)
+                )
             ).get(FileTreeViewModel::class.java)
+
         } catch (e: IllegalArgumentException) {
             Log.e(debugTag, "解析uri失败 返回null", e)
-            Toast.makeText(this, "目录或文件不存在", Toast.LENGTH_SHORT).show()
+
+            Toast.makeText(
+                this,
+                "目录或文件不存在",
+                Toast.LENGTH_SHORT
+            ).show()
+
             startActivity(Intent(this, StartProjectActivity::class.java))
             finish()
         }
@@ -165,9 +176,10 @@ fun UiProjectRoot(
     onDrawerFileItemClick: (file: FileNode) -> Unit = {},
     vm: ProjectRootViewModel = viewModel()
 ) {
-    val fileTree by fileTreeViewModel.fileTree.collectAsState()
-    val fileTreeError by fileTreeViewModel.error.collectAsState()
-    val isFileTreeLoading by fileTreeViewModel.isLoading.collectAsState()
+//    val fileTree by fileTreeViewModel.fileTree.collectAsState()
+//    val fileTreeRoot by fileTreeViewModel.rootNode.collectAsState()
+//    val fileTreeError by fileTreeViewModel.error.collectAsState()
+//    val isFileTreeLoading by fileTreeViewModel.isLoading.collectAsState()
 
     val expandDrawer = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -219,15 +231,15 @@ fun UiProjectRoot(
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item {
                         UiFileTreeView(
-                            fileTree,
-                            onFileClick = onDrawerFileItemClick,
-                            afterFileClick = {
+                            fileTreeViewModel,
+                            onClickFileNode = onDrawerFileItemClick,
+                            afterClickFileNode = {
                                 // TODO: 点击file item之后，不能成功收起侧边栏
                                 scope.launch {
                                     expandDrawer.close()
                                 }
                             },
-                            onLongClick = onLongClick
+                            onLongClickNode = onLongClick
                         )
                     }
                 }
@@ -369,10 +381,10 @@ fun UiProjectRoot(
                 try {
                     when (val node = selectedNode) {
                         is FileNode.File -> {
-                            fileTreeViewModel.renameFile(node.uri, newName)
+                            fileTreeViewModel.renameFile(node.resource, newName)
                         }
                         is FileNode.Directory -> {
-                            fileTreeViewModel.renameFile(node.uri, newName)
+                            fileTreeViewModel.renameFile(node.resource, newName)
                         }
                         else -> {}
                     }
@@ -400,7 +412,7 @@ fun UiProjectRoot(
             onConfirm = { fileName ->
                 try {
                     val dir = selectedNode as FileNode.Directory
-                    fileTreeViewModel.createFile(dir.uri, fileName)
+                    fileTreeViewModel.createFile(dir.resource, fileName)
                     showNewFileDialog = false
                     selectedNode = null
                 } catch (e: Exception) {
@@ -425,7 +437,7 @@ fun UiProjectRoot(
             onConfirm = { dirName ->
                 try {
                     val dir = selectedNode as FileNode.Directory
-                    fileTreeViewModel.createDirectory(dir.uri, dirName)
+                    fileTreeViewModel.createDirectory(dir.resource, dirName)
                     showNewDirDialog = false
                     selectedNode = null
                 } catch (e: Exception) {
@@ -454,10 +466,10 @@ fun UiProjectRoot(
                 try {
                     when (val node = selectedNode) {
                         is FileNode.File -> {
-                            fileTreeViewModel.deleteNode(node.uri, false)
+                            fileTreeViewModel.deleteNode(node.resource, false)
                         }
                         is FileNode.Directory -> {
-                            fileTreeViewModel.deleteNode(node.uri, true)
+                            fileTreeViewModel.deleteNode(node.resource, true)
                         }
                         else -> {}
                     }
@@ -481,45 +493,4 @@ fun PreviewUiProjectRoot() {
     val previewData = remember { PreviewFileTreeViewModel(sampleData) }
 
     UiProjectRoot(previewData)
-}
-
-// 预览专用的 ViewModel
-class PreviewFileTreeViewModel(
-    private val mockData: List<FileNode> = emptyList()
-) : FileTreeViewModel(
-    fileManager = MainActivity.fileManger, // 不会被使用
-    rootUri = Uri.EMPTY
-) {
-    init {
-        // 初始化时直接设置模拟数据
-        _fileTree.value = mockData
-        _isLoading.value = false
-        _error.value = null
-    }
-
-    // 覆盖加载方法，不执行任何 I/O 操作
-    override fun loadFileTree() {
-        // 预览模式不执行任何操作
-        _isLoading.value = false
-    }
-
-    override fun refresh() {
-        // 预览模式不执行任何操作
-    }
-
-    override fun createFile(parentUri: Uri, fileName: String): Result<Uri> {
-        return Result.success(Uri.EMPTY)
-    }
-
-    override fun createDirectory(parentUri: Uri, dirName: String): Result<Uri> {
-        return Result.success(Uri.EMPTY)
-    }
-
-    override fun renameFile(uri: Uri, newName: String): Result<Unit> {
-        return Result.success(Unit)
-    }
-
-    override fun deleteNode(uri: Uri, isDirectory: Boolean): Result<Unit> {
-        return Result.success(Unit)
-    }
 }

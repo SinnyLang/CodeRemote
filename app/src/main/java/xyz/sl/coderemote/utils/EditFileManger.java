@@ -7,7 +7,6 @@ import android.net.Uri;
 import android.provider.OpenableColumns;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
 import androidx.documentfile.provider.DocumentFile;
 
 import org.jetbrains.annotations.NotNull;
@@ -25,7 +24,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import xyz.sl.coderemote.ui.FileNode;
+import xyz.sl.coderemote.core.FileNode;
 
 public class EditFileManger {
     // EditFileManger 的生命周期与 ApplicationContext 相同
