@@ -4,8 +4,9 @@ import androidx.documentfile.provider.DocumentFile
 import org.junit.Test
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import xyz.sl.coderemote.ui.FileNode
+import xyz.sl.coderemote.core.FileNode
 import xyz.sl.coderemote.utils.UriUtils.documentFileToNode
 
 class UriUtilsTest {
@@ -39,13 +40,15 @@ class UriUtilsTest {
         // 调用转换函数
         val node = documentFileToNode(folder, null, mockk())
 
-        assertEquals("root", node.name)
-        val dir = node as FileNode.Directory
-        assertEquals(3, dir.children.size)
-        assert(dir.children[0] is FileNode.Directory)
-        assertEquals("dir1", dir.children[0].name)
-        assert(dir.children[1] is FileNode.File)
-        assertEquals("file1.txt", dir.children[1].name)
-        assertEquals("root", dir.children[0].parent?.name)
+        runBlocking {
+            assertEquals("root", node.name)
+            val dir = node as FileNode.Directory
+            assertEquals(3, dir.getChildren().size)
+            assert(dir.getChildren()[0] is FileNode.Directory)
+            assertEquals("dir1", dir.getChildren()[0].name)
+            assert(dir.getChildren()[1] is FileNode.File)
+            assertEquals("file1.txt", dir.getChildren()[1].name)
+            assertEquals("root", dir.getChildren()[0].parent?.name)
+        }
     }
 }

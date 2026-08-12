@@ -18,7 +18,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -39,8 +37,7 @@ import xyz.sl.coderemote.core.DataStoreHistoryFiles
 import xyz.sl.coderemote.core.HistoryFilesStorage
 import xyz.sl.coderemote.ui.dialog.SSHSelectDirectoryStepDialog
 import xyz.sl.coderemote.ui.theme.TextEditorComposeTheme
-import xyz.sl.coderemote.utils.RemoteFileManger
-import xyz.sl.coderemote.utils.SshClient
+import xyz.sl.coderemote.core.remote.SshClient
 
 val tag = "StartProjectActivity"
 
@@ -115,17 +112,24 @@ fun UiStartProject(){
     LaunchedEffect(remoteWorkDir) {
         if (sshClient != null && remoteWorkDir.isNotEmpty()) {
             // 1.创建目录映射
-            MainActivity.setFileManger(
-                RemoteFileManger(context.applicationContext, sshClient, remoteWorkDir)
-            )
+//            MainActivity.setFileManger(
+//                RemoteFileManger(context.applicationContext, sshClient, remoteWorkDir)
+//            )
 
-            // 2.设置远程主机
-            MainActivity.remoteClient = sshClient
+            // 2.将连接添加到管理器
+            MainActivity.sshManager.addConnection(sshClient)
 
             // 3.跳转到 ProjectRootActivity，同时传递目录映射
+            val remoteUri = Uri.Builder()
+                .scheme("sftp")
+                .encodedAuthority(sshClient!!.sshConnectionConfig.id)
+                .path(remoteWorkDir)
+                .build()
             val intent = Intent(context, ProjectRootActivity::class.java).apply {
-                putExtra("uri", remoteWorkDir)
+                putExtra("uri", remoteUri.toString())
             }
+            Log.i(tag, remoteUri.toString())
+
             //TODO: LaunchedEffect 中使用 context 容易引发内存泄漏，需要被替代
             context.startActivity(intent)
             (context as? Activity)?.finish()

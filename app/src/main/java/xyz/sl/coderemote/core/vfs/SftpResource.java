@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
-import xyz.sl.coderemote.utils.SshClient;
+import xyz.sl.coderemote.core.remote.SshClient;
 
 public class SftpResource implements DirectoryResource {
     private final SshClient connection;
@@ -63,7 +63,7 @@ public class SftpResource implements DirectoryResource {
     @Override
     public boolean exists() {
         try {
-            connection.getChannelSftp().stat(path);
+            connection.getSftpChannel().stat(path);
             return true;
         } catch (SftpException e) {
             return false;
@@ -74,9 +74,9 @@ public class SftpResource implements DirectoryResource {
     public boolean delete() throws RuntimeException {
         try {
             if (attrs.isDir()) {
-                connection.getChannelSftp().rmdir(path);
+                connection.getSftpChannel().rmdir(path);
             } else {
-                connection.getChannelSftp().rm(path);
+                connection.getSftpChannel().rm(path);
             }
             return true;
         } catch (SftpException e) {
@@ -90,7 +90,7 @@ public class SftpResource implements DirectoryResource {
         String newPath = parent + "/" + newName;
 
         try {
-            connection.getChannelSftp().rename(path, newPath);
+            connection.getSftpChannel().rename(path, newPath);
             return resolve(newPath);
         } catch (SftpException e) {
             throw new IOException(e);
@@ -100,7 +100,7 @@ public class SftpResource implements DirectoryResource {
     @Override
     public InputStream openInputStream() throws IOException {
         try {
-            return connection.getChannelSftp().get(path);
+            return connection.getSftpChannel().get(path);
         } catch (SftpException e) {
             throw new IOException(e);
         }
@@ -108,7 +108,7 @@ public class SftpResource implements DirectoryResource {
     @Override
     public OutputStream openOutputStream() throws IOException {
         try {
-            return connection.getChannelSftp().put(path);
+            return connection.getSftpChannel().put(path);
         } catch (SftpException e) {
             throw new IOException(e);
         }
@@ -124,7 +124,7 @@ public class SftpResource implements DirectoryResource {
         List<Resource> result = new ArrayList<>();
 
         try {
-            Vector<ChannelSftp.LsEntry> entries = connection.getChannelSftp().ls(path);
+            Vector<ChannelSftp.LsEntry> entries = connection.getSftpChannel().ls(path);
 
             for (ChannelSftp.LsEntry entry : entries) {
                 String name = entry.getFilename();
@@ -145,7 +145,7 @@ public class SftpResource implements DirectoryResource {
 
     private SftpResource resolve(String path) throws IOException {
         try {
-            SftpATTRS attrs = connection.getChannelSftp().stat(path);
+            SftpATTRS attrs = connection.getSftpChannel().stat(path);
             return new SftpResource(connection, path, attrs);
         } catch (SftpException e) {
             throw new IOException(e);
@@ -156,7 +156,7 @@ public class SftpResource implements DirectoryResource {
     public Resource createFile(String name) throws IOException {
         String newPath = path + "/" + name;
         try {
-            OutputStream output = connection.getChannelSftp().put(newPath);
+            OutputStream output = connection.getSftpChannel().put(newPath);
             output.close();
 
             return resolve(newPath);
@@ -169,7 +169,7 @@ public class SftpResource implements DirectoryResource {
     public Resource createDirectory(String name) throws IOException {
         String newPath = path + "/" + name;
         try {
-            connection.getChannelSftp().mkdir(newPath);
+            connection.getSftpChannel().mkdir(newPath);
 
             return resolve(newPath);
         } catch (SftpException e) {

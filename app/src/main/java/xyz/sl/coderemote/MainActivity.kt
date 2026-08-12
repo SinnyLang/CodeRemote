@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import xyz.sl.coderemote.core.remote.SshConnectionStore
+import xyz.sl.coderemote.core.remote.SshManager
 import xyz.sl.coderemote.core.vfs.LocalResourceProvider
 import xyz.sl.coderemote.core.vfs.ResourceManager
 import xyz.sl.coderemote.core.vfs.ResourceProvider
@@ -12,7 +14,6 @@ import xyz.sl.coderemote.core.vfs.SftpResourceProvider
 import xyz.sl.coderemote.ui.StartProjectActivity
 import xyz.sl.coderemote.utils.BaseFileManager
 import xyz.sl.coderemote.utils.LocalFileManger
-import xyz.sl.coderemote.utils.SshClient
 
 class MainActivity : ComponentActivity() {
 
@@ -33,9 +34,11 @@ class MainActivity : ComponentActivity() {
         }
 
         // 每次只能有一个主机上的project被打开
-        var remoteClient: SshClient? = null
+//        var remoteClient: SshClient? = null
 
         lateinit var resourceManager: ResourceManager
+            private set
+        lateinit var sshManager: SshManager
             private set
     }
 
@@ -44,14 +47,16 @@ class MainActivity : ComponentActivity() {
 
         // 1. 创建全局 EditFileManger 对象，用于管理文件
         fileManger = LocalFileManger(this.application.applicationContext)
+        // 2. 创建全局 SshManger 对象，用于管理 SSH 连接
+        sshManager = SshManager(SshConnectionStore())
 
-        // 1. 创建 VFS
+        // 3. 创建 VFS
         resourceManager = ResourceManager(listOf<ResourceProvider>(
             LocalResourceProvider(applicationContext),
-            SftpResourceProvider()
+            SftpResourceProvider(sshManager)
         ))
 
-        // 2. 启动 App 程序
+        // 4. 启动 App 程序
         startActivity(Intent(this, StartProjectActivity::class.java))
         finish()
     }

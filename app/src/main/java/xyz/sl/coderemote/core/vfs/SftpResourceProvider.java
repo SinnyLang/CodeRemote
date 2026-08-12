@@ -2,14 +2,32 @@ package xyz.sl.coderemote.core.vfs;
 
 import android.net.Uri;
 
+// todo: network action should be moved into Resource
+import com.jcraft.jsch.SftpException;
+
 import java.io.IOException;
 
+import xyz.sl.coderemote.core.remote.SshClient;
+import xyz.sl.coderemote.core.remote.SshManager;
+
+/** SFTP uri maybe define:
+ *
+ * <p>
+ *  origin uri:
+ *  [sftp]://[jocker]@[localhost]:[22][/home/abc/abc.txt]?{query}#{fragment}
+ * </p>
+ * <p>
+ *  connection id uri:
+ *  sftp://[connection-id][path]?{query}#{fragment}
+ * </p>
+ *
+ */
 public class SftpResourceProvider implements ResourceProvider {
 
-//    private final SftpConnectionManager connectionManager;
-//    public SftpResourceProvider(SftpConnectionManager connectionManager) {
-//        this.connectionManager = connectionManager;
-//    }
+    private final SshManager sshManager;
+    public SftpResourceProvider(SshManager sshManager) {
+        this.sshManager = sshManager;
+    }
 
     @Override
     public boolean supports(Uri uri) {
@@ -24,10 +42,13 @@ public class SftpResourceProvider implements ResourceProvider {
             throw new IOException("Missing SFTP connection ID");
         }
 
-//        SftpConnection connection = connectionManager.getConnection(connectionId);
+        SshClient connection = sshManager.getConnection(connectionId);
         String path = uri.getPath();
 
-//        return connection.resolve(path);
-        return null;
+        try {
+            return new SftpResource(connection, path, connection.getSftpChannel().stat(path));
+        } catch (SftpException e) {
+            throw new IOException(e);
+        }
     }
 }

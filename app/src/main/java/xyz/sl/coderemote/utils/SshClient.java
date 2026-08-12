@@ -20,6 +20,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
 
+@Deprecated
 public class SshClient {
     private Session session;
     private ChannelSftp channelSftp;

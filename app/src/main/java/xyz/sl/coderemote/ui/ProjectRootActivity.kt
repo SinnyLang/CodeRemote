@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -32,12 +34,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -46,12 +51,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import xyz.sl.coderemote.MainActivity
 import xyz.sl.coderemote.ui.dialog.DangerConfirmDialog
 import xyz.sl.coderemote.ui.dialog.TextInputDialog
-import xyz.sl.coderemote.utils.UriUtils.findFileUri
 import xyz.sl.coderemote.core.FileNode
 
 var debugTag : String = "ProjectRootActivity"
@@ -69,30 +77,8 @@ class ProjectRootActivity : ComponentActivity() {
         val uriStr = intent.getStringExtra("uri")
         uri =  Uri.parse(uriStr)
 
-        try {
-            fileTreeVM = ViewModelProvider(
-                this,
-                FileTreeViewModelFactory(
-                    MainActivity.fileManger,
-                    MainActivity.resourceManager.resolve(uri)
-                )
-            ).get(FileTreeViewModel::class.java)
-
-        } catch (e: IllegalArgumentException) {
-            Log.e(debugTag, "解析uri失败 返回null", e)
-
-            Toast.makeText(
-                this,
-                "目录或文件不存在",
-                Toast.LENGTH_SHORT
-            ).show()
-
-            startActivity(Intent(this, StartProjectActivity::class.java))
-            finish()
-        }
-
         // TODO: avoid uri is null in StartProjectActivity
-        Log.i(debugTag,"uri"+uri.toString())
+        Log.i(debugTag,"uri "+uri.toString())
 
         // 点击文件列表中的文件触发此函数
         //   如果是文件则更新 currentUri
@@ -108,14 +94,63 @@ class ProjectRootActivity : ComponentActivity() {
             }
 
             // 更新当前显示的文件
-            vm.updateCurrentUri( findFileUri(this, uri, relativePath) ?: Uri.EMPTY )
+//            vm.updateCurrentUri( findFileUri(this, uri, relativePath) ?: Uri.EMPTY )
+            vm.updateCurrentUri(node.resource.uri)
         }
 
+        val _isLoading = MutableStateFlow(true)
+        val isLoading = _isLoading.asStateFlow()
+        val _error = MutableStateFlow<Throwable?>(null)
+        val error = _error.asStateFlow()
         setContent {
-            UiProjectRoot(
-                fileTreeVM,
-                onDrawerFileItemClick = onDrawerFileItemClick,
-            )
+            val isLoading = isLoading.collectAsState()
+            val error = error.collectAsState()
+
+            if (error.value != null) {
+                Toast.makeText(
+                    this,
+                    error.toString(),
+                    Toast.LENGTH_LONG
+                ).show()
+
+                LaunchedEffect(error) {
+                    Log.e(debugTag, "解析uri失败", error.value)
+                    startActivity(
+                        Intent(this@ProjectRootActivity, StartProjectActivity::class.java)
+                    )
+                    finish()
+                }
+
+            } else if (isLoading.value) {
+                // 显示加载中
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                UiProjectRoot(
+                    fileTreeVM,
+                    onDrawerFileItemClick = onDrawerFileItemClick,
+                )
+            }
+        }
+
+        // 加载文件树放到协程
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val resolved = MainActivity.resourceManager.resolve(uri)
+                val vm = ViewModelProvider(
+                    this@ProjectRootActivity,
+                    FileTreeViewModelFactory(
+                        MainActivity.fileManger,
+                        resolved
+                    )
+                ).get(FileTreeViewModel::class.java)
+
+                fileTreeVM = vm
+                _isLoading.value = false
+            } catch (e: IllegalArgumentException) {
+                _error.value = e
+            }
         }
     }
 }

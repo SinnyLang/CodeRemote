@@ -11,7 +11,7 @@ import java.io.OutputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import xyz.sl.coderemote.utils.SshClient;
+import xyz.sl.coderemote.core.remote.SshClient;
 
 public class SSHConnectTest {
     String hostLinux = BuildConfig.SSH_LINUX_HOST;
@@ -29,12 +29,12 @@ public class SSHConnectTest {
 
     @Before
     public void connect() throws Exception {
-        sshClientLinux = new SshClient();
-        sshClientLinux.connect(hostLinux, portLinux, nameLinux, passwordLinux);
+        sshClientLinux = new SshClient(hostLinux, portLinux, nameLinux, passwordLinux);
+        sshClientLinux.connect();
         assertTrue(sshClientLinux.isConnected());
 
-        sshClientWin = new SshClient();
-        sshClientWin.connect(hostWin, portWin, nameWin, passwordWin);
+        sshClientWin = new SshClient(hostWin, portWin, nameWin, passwordWin);
+        sshClientWin.connect();
         assertTrue(sshClientWin.isConnected());
     }
 
@@ -50,11 +50,11 @@ public class SSHConnectTest {
     @Test
     public void testRemoteFile(){
         System.out.println("======== Test Remote File =========");
-        String files1 = String.valueOf(sshClientWin.listFiles(sshClientWin.userPath()));
+        String files1 = String.valueOf(sshClientWin.listFiles(sshClientWin.getCurrentDirectory()));
         System.out.println(files1);
 
         System.out.println("======== Test Remote File =========");
-        String files2 = String.valueOf(sshClientLinux.listFiles(sshClientLinux.userPath()));
+        String files2 = String.valueOf(sshClientLinux.listFiles(sshClientLinux.getCurrentDirectory()));
         System.out.println(files2);
     }
 
@@ -62,8 +62,8 @@ public class SSHConnectTest {
     public void testLinuxIOStream(){
         System.out.println("======== Test I/O =========");
         try {
-            InputStream inputStream = sshClientLinux.getChannelShellInputStream();
-            OutputStream outputStream = sshClientLinux.getChannelShellOutputStream();
+            InputStream inputStream = sshClientLinux.getShellInputStream();
+            OutputStream outputStream = sshClientLinux.getShellOutputStream();
             readOutput(inputStream);
             // Send commands
             sendCommand(outputStream, "ls -lh");
@@ -89,8 +89,8 @@ public class SSHConnectTest {
     public void testWinIOStream(){
         System.out.println("======== Test I/O =========");
         try {
-            InputStream inputStream = sshClientWin.getChannelShellInputStream();
-            OutputStream outputStream = sshClientWin.getChannelShellOutputStream();
+            InputStream inputStream = sshClientWin.getShellInputStream();
+            OutputStream outputStream = sshClientWin.getShellOutputStream();
             readOutput(inputStream);
             // Send commands
             sendCommand(outputStream, "dir");

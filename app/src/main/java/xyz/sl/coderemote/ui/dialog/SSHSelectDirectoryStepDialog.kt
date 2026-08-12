@@ -39,7 +39,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import xyz.sl.coderemote.utils.SshClient
+import xyz.sl.coderemote.core.remote.SshClient
 
 const val tag = "SSHSelectDirectoryStepDialog"
 
@@ -81,15 +81,15 @@ fun SSHSelectDirectoryStepDialog(
         // 使用协程执行实际连接
         return withContext(Dispatchers.IO) {
             try {
-                val client = SshClient()
-                client.connect(host, port.toInt(), username, password)
+                val client = SshClient(host, port.toInt(), username, password)
+                client.connect()
                 sshClient = client
                 Log.d(tag, "ssh is connected: " + client.isConnected)
                 // 加载根目录
                 if (!client.isConnected) throw Exception("连接失败")
 
                 currentPath = "/"
-                dirEntries = client.listDirectoryOnly(currentPath)
+                dirEntries = client.listDirectories(currentPath)
                 true
             } catch (e: Exception) {
                 Log.e(tag, e.message, e)
@@ -107,7 +107,7 @@ fun SSHSelectDirectoryStepDialog(
         // 使用 IO 线程执行网络操作
         val entries = withContext(Dispatchers.IO) {
             try {
-                sshClient!!.listDirectoryOnly(path)
+                sshClient!!.listDirectories(path)
             } catch (e: Exception) {
                 // 出错时返回空列表或抛出异常
                 Log.e(tag, e.message, e)
