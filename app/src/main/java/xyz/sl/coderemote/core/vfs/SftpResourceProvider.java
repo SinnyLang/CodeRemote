@@ -1,5 +1,7 @@
 package xyz.sl.coderemote.core.vfs;
 
+import android.app.Application;
+import android.content.Context;
 import android.net.Uri;
 
 // todo: network action should be moved into Resource
@@ -9,6 +11,8 @@ import java.io.IOException;
 
 import xyz.sl.coderemote.core.remote.SshClient;
 import xyz.sl.coderemote.core.remote.SshManager;
+import xyz.sl.coderemote.core.vfs.cache.Cache;
+import xyz.sl.coderemote.core.vfs.cache.SftpCache;
 
 /** SFTP uri maybe define:
  *
@@ -25,8 +29,16 @@ import xyz.sl.coderemote.core.remote.SshManager;
 public class SftpResourceProvider implements ResourceProvider {
 
     private final SshManager sshManager;
-    public SftpResourceProvider(SshManager sshManager) {
+    private final LocalResourceProvider localResourceProvider;
+    private final SftpCache sftpCache;
+    public SftpResourceProvider(
+            Context context,
+            SshManager sshManager,
+            LocalResourceProvider localResourceProvider
+    ) {
         this.sshManager = sshManager;
+        this.localResourceProvider = localResourceProvider;
+        this.sftpCache = new SftpCache(context);
     }
 
     @Override
@@ -36,7 +48,7 @@ public class SftpResourceProvider implements ResourceProvider {
 
     @Override
     public Resource resolve(Uri uri) throws IOException {
-        String connectionId = uri.getHost();
+        String connectionId = uri.getAuthority();
 
         if (connectionId == null) {
             throw new IOException("Missing SFTP connection ID");
@@ -45,8 +57,16 @@ public class SftpResourceProvider implements ResourceProvider {
         SshClient connection = sshManager.getConnection(connectionId);
         String path = uri.getPath();
 
+        // 映射到本地文件
+        Uri cachedResource = sftpCache.getCachedResource(connectionId, uri.getPath());
+
         try {
-            return new SftpResource(connection, path, connection.getSftpChannel().stat(path));
+            return new SftpResource(
+                    (LocalResource) localResourceProvider.resolve(cachedResource),
+                    connection,
+                    path,
+                    connection.getSftpChannel().stat(path)
+            );
         } catch (SftpException e) {
             throw new IOException(e);
         }

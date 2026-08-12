@@ -15,12 +15,19 @@ import java.util.Vector;
 
 import xyz.sl.coderemote.core.remote.SshClient;
 
+/**
+ * 表示远程主机和本地存在的文件，一个 SftpResource 同时指向这两个文件资源
+ * 当本地 Resource 做出更改时，将相应的操作同步至远程主机
+ */
 public class SftpResource implements DirectoryResource {
+    private final LocalResource localMappedResource;
     private final SshClient connection;
     private final String path;
     private final SftpATTRS attrs;
 
-    public SftpResource(SshClient connection, String path, SftpATTRS attrs) {
+    public SftpResource(LocalResource localMappedResource,SshClient connection,
+                        String path, SftpATTRS attrs) {
+        this.localMappedResource = localMappedResource;
         this.connection = connection;
         this.path = path;
         this.attrs = attrs;

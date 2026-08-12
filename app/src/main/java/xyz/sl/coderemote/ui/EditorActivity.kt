@@ -55,22 +55,22 @@ val Tag = "CR-Ui-Editor"
 class EditorActivity : ComponentActivity() {
     private var savedText by mutableStateOf("")
 
-    private var openFileLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        uri?.let {
-            val content = readTextFromUri(it)
-            savedText = content
-        }
-    }
+//    private var openFileLauncher = registerForActivityResult(
+//        ActivityResultContracts.OpenDocument()
+//    ) { uri: Uri? ->
+//        uri?.let {
+//            val content = readTextFromUri(it)
+//            savedText = content
+//        }
+//    }
 
-    private var saveFileLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("text/plain")
-    ) { uri: Uri? ->
-        uri?.let {
-            writeTextToUri(it, savedText)
-        }
-    }
+//    private var saveFileLauncher = registerForActivityResult(
+//        ActivityResultContracts.CreateDocument("text/plain")
+//    ) { uri: Uri? ->
+//        uri?.let {
+//            writeTextToUri(it, savedText)
+//        }
+//    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,25 +88,25 @@ class EditorActivity : ComponentActivity() {
         }
     }
 
-    private fun readTextFromUri(uri: Uri): String {
-        return try {
-            contentResolver.openInputStream(uri)?.use { it.reader().readText() } ?: ""
-        } catch (e: Exception) {
-            Toast.makeText(this, "读取失败: ${e.message}", Toast.LENGTH_SHORT).show()
-            ""
-        }
-    }
-
-    private fun writeTextToUri(uri: Uri, text: String) {
-        try {
-            contentResolver.openOutputStream(uri)?.use {
-                it.write(text.toByteArray())
-                Toast.makeText(this, "保存成功", Toast.LENGTH_SHORT).show()
-            }
-        } catch (e: Exception) {
-            Toast.makeText(this, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
+//    private fun readTextFromUri(uri: Uri): String {
+//        return try {
+//            contentResolver.openInputStream(uri)?.use { it.reader().readText() } ?: ""
+//        } catch (e: Exception) {
+//            Toast.makeText(this, "读取失败: ${e.message}", Toast.LENGTH_SHORT).show()
+//            ""
+//        }
+//    }
+//
+//    private fun writeTextToUri(uri: Uri, text: String) {
+//        try {
+//            contentResolver.openOutputStream(uri)?.use {
+//                it.write(text.toByteArray())
+//                Toast.makeText(this, "保存成功", Toast.LENGTH_SHORT).show()
+//            }
+//        } catch (e: Exception) {
+//            Toast.makeText(this, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
+//        }
+//    }
 }
 
 data class OptionItem(val text: String, val action: () -> Unit)
