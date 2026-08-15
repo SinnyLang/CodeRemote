@@ -1,5 +1,41 @@
-# CodeRemote
-​## Todo List
+# CodeRemote (Cr)
 
-- [x] Edit local project or files
-- [ ] Connect Server
+**CodeRemote** 是一款轻量级远程代码编辑器，支持编辑本地和远程主机项目。当前支持本地项目编辑，正在开发远程编辑功能。
+
+
+<img src="./docs/images/tab-localProject.jpg" alt="localProject" width="600">
+
+> 更多图片参见 `doc/images`。
+
+---
+
+## ✨ 特性
+
+### 当前功能
+- 📁 本地项目浏览与编辑
+- 📝 文本编辑器（自动保存）
+- 🗂️ 文件树浏览
+
+### 开发中
+- 📂 SSH/SFTP 连接的远程文件浏览与编辑
+- 🔄 文件缓存与同步
+
+### 未来计划
+- 🖥️ 远程 Shell
+- 🛠️ 远程编译
+
+---
+
+## 🚀 快速开始
+
+### 系统要求
+- Android 7.0+ (API 24+)
+
+### 安装
+当前未发布。
+
+### 本地项目使用
+1. 启动应用，在文件树中选择项目根目录
+2. 点击文件开始编辑
+3. 修改自动保存
+
