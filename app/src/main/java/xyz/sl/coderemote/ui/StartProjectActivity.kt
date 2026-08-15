@@ -112,9 +112,7 @@ fun UiStartProject(){
     LaunchedEffect(remoteWorkDir) {
         if (sshClient != null && remoteWorkDir.isNotEmpty()) {
             // 1.创建目录映射
-//            MainActivity.setFileManger(
-//                RemoteFileManger(context.applicationContext, sshClient, remoteWorkDir)
-//            )
+            sshClient!!.baseDir = remoteWorkDir
 
             // 2.将连接添加到管理器
             MainActivity.sshManager.addConnection(sshClient)

@@ -8,6 +8,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import xyz.sl.coderemote.core.FileNode
 import xyz.sl.coderemote.utils.UriUtils.documentFileToNode
+import java.nio.file.Paths
 
 class UriUtilsTest {
     @Test
@@ -50,5 +51,28 @@ class UriUtilsTest {
             assertEquals("file1.txt", dir.getChildren()[1].name)
             assertEquals("root", dir.getChildren()[0].parent?.name)
         }
+    }
+
+    @Test
+    fun textPathRelativize() {
+        // ..\..\..\d\c.txt
+        var p1 = Paths.get("/C%3A/a/b/c/d.txt")
+        var p2 = Paths.get("/c%3A/a/d/c.txt")
+        println(p1.relativize(p2))
+
+        // d\e.txt
+        var p3 = Paths.get("/C%3A/a/b/c")
+        var p4 = Paths.get("/C%3A/a/b/c/d/e.txt")
+        println(p3.relativize(p4))
+
+        // ..\..\..\..\D%3A\z\y\x\w\v.txt
+        var p5 = Paths.get("/C%3A/a/b/c")
+        var p6 = Paths.get("/D%3A/z/y/x/w/v.txt")
+        println(p5.relativize(p6))
+
+        // ..\..\..\z\y\x\w\v.txt
+        var p7 = Paths.get("/a/b/c")
+        var p8 = Paths.get("/z/y/x/w/v.txt")
+        println(p7.relativize(p8))
     }
 }

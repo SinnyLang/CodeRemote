@@ -135,6 +135,7 @@ class ProjectRootActivity : ComponentActivity() {
         }
 
         // 加载文件树放到协程
+        // uri= sftp://[auth]/C:/Users/jocker/Desktop
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val resolved = MainActivity.resourceManager.resolve(uri)

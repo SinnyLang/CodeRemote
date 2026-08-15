@@ -16,6 +16,32 @@ public class SshConnectionConfig {
     private final String privateKeyPath;
     private final String passphrase;
 
+    private String baseDir;
+
+    public SshConnectionConfig(
+            String id,
+            String name,
+            String host,
+            int port,
+            String username,
+            AuthType authType,
+            String password,
+            String privateKeyPath,
+            String passphrase,
+            String baseDir
+    ) {
+        this.id = id;
+        this.name = name;
+        this.host = host;
+        this.port = port;
+        this.username = username;
+        this.authType = authType;
+        this.password = password;
+        this.privateKeyPath = privateKeyPath;
+        this.passphrase = passphrase;
+        this.baseDir = baseDir;
+    }
+
     public SshConnectionConfig(
             String id,
             String name,
@@ -36,6 +62,7 @@ public class SshConnectionConfig {
         this.password = password;
         this.privateKeyPath = privateKeyPath;
         this.passphrase = passphrase;
+        this.baseDir = "/";
     }
 
     public String getId() {
@@ -72,6 +99,14 @@ public class SshConnectionConfig {
 
     public String getPassphrase() {
         return passphrase;
+    }
+
+    public String getBaseDir() {
+        return baseDir;
+    }
+
+    public void setBaseDir(String baseDir) {
+        this.baseDir = baseDir;
     }
 
     public enum AuthType {

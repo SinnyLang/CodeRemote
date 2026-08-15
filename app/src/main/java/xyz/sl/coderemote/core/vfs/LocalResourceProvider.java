@@ -5,6 +5,7 @@ import android.net.Uri;
 
 import androidx.documentfile.provider.DocumentFile;
 
+import java.io.File;
 import java.io.IOException;
 
 public class LocalResourceProvider implements ResourceProvider {
@@ -22,7 +23,18 @@ public class LocalResourceProvider implements ResourceProvider {
 
     @Override
     public Resource resolve(Uri uri) throws IOException {
-        DocumentFile file = DocumentFile.fromTreeUri(context, uri);
+        DocumentFile file = null;
+
+        if ("file".equals(uri.getScheme())) {
+            String path = uri.getPath();
+            if (path != null){
+                file = DocumentFile.fromFile(new File(path));
+            }
+        }
+
+        if ("content".equals(uri.getScheme()))
+            file = DocumentFile.fromTreeUri(context, uri);
+
         if (file == null) {
             throw new IOException("Invalid URI: " + uri);
         }

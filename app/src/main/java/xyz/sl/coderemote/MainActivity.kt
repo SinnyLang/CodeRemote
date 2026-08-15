@@ -33,9 +33,6 @@ class MainActivity : ComponentActivity() {
             Companion.fileManger = fileManger
         }
 
-        // 每次只能有一个主机上的project被打开
-//        var remoteClient: SshClient? = null
-
         lateinit var resourceManager: ResourceManager
             private set
         lateinit var sshManager: SshManager
@@ -51,9 +48,14 @@ class MainActivity : ComponentActivity() {
         sshManager = SshManager(SshConnectionStore())
 
         // 3. 创建 VFS
+        val localResourceProvider = LocalResourceProvider(applicationContext)
         resourceManager = ResourceManager(listOf<ResourceProvider>(
-            LocalResourceProvider(applicationContext),
-            SftpResourceProvider(sshManager)
+            localResourceProvider,
+            SftpResourceProvider(
+                applicationContext,
+                sshManager,
+                localResourceProvider
+            )
         ))
 
         // 4. 启动 App 程序

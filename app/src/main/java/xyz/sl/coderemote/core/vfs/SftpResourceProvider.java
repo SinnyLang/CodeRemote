@@ -1,6 +1,5 @@
 package xyz.sl.coderemote.core.vfs;
 
-import android.app.Application;
 import android.content.Context;
 import android.net.Uri;
 
@@ -11,8 +10,7 @@ import java.io.IOException;
 
 import xyz.sl.coderemote.core.remote.SshClient;
 import xyz.sl.coderemote.core.remote.SshManager;
-import xyz.sl.coderemote.core.vfs.cache.Cache;
-import xyz.sl.coderemote.core.vfs.cache.SftpCache;
+import xyz.sl.coderemote.core.vfs.cache.SftpCacheTranslate;
 
 /** SFTP uri maybe define:
  *
@@ -30,7 +28,8 @@ public class SftpResourceProvider implements ResourceProvider {
 
     private final SshManager sshManager;
     private final LocalResourceProvider localResourceProvider;
-    private final SftpCache sftpCache;
+    private final SftpCacheTranslate sftpCacheTranslate;
+
     public SftpResourceProvider(
             Context context,
             SshManager sshManager,
@@ -38,7 +37,7 @@ public class SftpResourceProvider implements ResourceProvider {
     ) {
         this.sshManager = sshManager;
         this.localResourceProvider = localResourceProvider;
-        this.sftpCache = new SftpCache(context);
+        this.sftpCacheTranslate = new SftpCacheTranslate(context);
     }
 
     @Override
@@ -49,23 +48,34 @@ public class SftpResourceProvider implements ResourceProvider {
     @Override
     public Resource resolve(Uri uri) throws IOException {
         String connectionId = uri.getAuthority();
+        String remotePath = uri.getPath();
 
         if (connectionId == null) {
             throw new IOException("Missing SFTP connection ID");
         }
 
         SshClient connection = sshManager.getConnection(connectionId);
-        String path = uri.getPath();
+
+        // parameter uri:
+        // such as baseDir = sftp://[auth]/C:/Users/jocker/Desktop
+        // such as file    = sftp://[auth]/C:/Users/jocker/Desktop/a.txt
 
         // 映射到本地文件
-        Uri cachedResource = sftpCache.getCachedResource(connectionId, uri.getPath());
+        // local cache uri:
+        // such as baseDir = file:///[cacheDir]/ssh/[connectId]/Desktop
+        // such as file    = file:///[cacheDir]/ssh/[connectId]/Desktop/a.txt
+        Uri cacheResourceUri = sftpCacheTranslate.getCacheResourceUri(
+                connectionId,
+                connection.getBaseDir(),
+                remotePath
+        );
 
         try {
             return new SftpResource(
-                    (LocalResource) localResourceProvider.resolve(cachedResource),
+                    (LocalResource) localResourceProvider.resolve(cacheResourceUri),
                     connection,
-                    path,
-                    connection.getSftpChannel().stat(path)
+                    uri,
+                    connection.getSftpChannel().stat(remotePath)  // /C:/Users/jocker/Desktop
             );
         } catch (SftpException e) {
             throw new IOException(e);

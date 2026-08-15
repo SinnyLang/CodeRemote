@@ -19,5 +19,6 @@ public interface Resource {
     InputStream openInputStream() throws IOException;
     OutputStream openOutputStream() throws IOException;
     boolean isDirectory();
+    Resource ensureParentDirectory();
 }
 

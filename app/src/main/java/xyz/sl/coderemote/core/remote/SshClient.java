@@ -544,6 +544,14 @@ public class SshClient {
         return config;
     }
 
+    public void setBaseDir(String baseDir){
+        config.setBaseDir(baseDir);
+    }
+
+    public String getBaseDir() {
+        return config.getBaseDir();
+    }
+
     // ==================== 内部类 ====================
 
     /**

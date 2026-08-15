@@ -2,7 +2,6 @@ package xyz.sl.coderemote.core.vfs;
 
 import android.app.Application;
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.net.Uri;
 import androidx.documentfile.provider.DocumentFile;
 
@@ -12,6 +11,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+
+import xyz.sl.coderemote.utils.DocumentFileUtils;
 
 public class LocalResource implements DirectoryResource {
     private final Context context;
@@ -129,5 +130,38 @@ public class LocalResource implements DirectoryResource {
             throw new RuntimeException("Failed to create directory: " + name);
         }
         return new LocalResource(context, directory);
+    }
+
+    @Override
+    public Resource ensureParentDirectory(){
+        DocumentFile parentDirectory = DocumentFileUtils.ensureParentDirectory(context, documentFile);
+        if (parentDirectory == null)
+            throw new RuntimeException("can not ensure parent directory: "+documentFile.getUri());
+
+        return new LocalResource(context, parentDirectory);
+    }
+
+
+    protected LocalResource resolve(String name){
+        Uri child = getUri().buildUpon().appendPath(name).build();
+
+        DocumentFile file = null;
+        if ("file".equals(child.getScheme())) {
+            String path = child.getPath();
+            if (path != null){
+                file = DocumentFile.fromFile(new File(path));
+            }
+        }
+
+        if ("content".equals(child.getScheme()))
+            file = DocumentFile.fromTreeUri(context, child);
+
+
+        if (file == null) {
+            throw new RuntimeException("Invalid URI: " + child);
+        }
+
+        LocalResource localResource = new LocalResource(context, file);
+        return localResource;
     }
 }
