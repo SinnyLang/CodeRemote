@@ -29,6 +29,19 @@ class MainActivity : ComponentActivity() {
             fileManger = LocalFileManger(context)
         }
 
+        fun setResourceManagerForUiPreview(context: Context){
+            sshManager = SshManager(SshConnectionStore())
+            val localResourceProvider = LocalResourceProvider(context)
+            resourceManager = ResourceManager(listOf<ResourceProvider>(
+                localResourceProvider,
+                SftpResourceProvider(
+                    context,
+                    sshManager,
+                    localResourceProvider
+                )
+            ))
+        }
+
         fun setFileManger(fileManger: BaseFileManager){
             Companion.fileManger = fileManger
         }

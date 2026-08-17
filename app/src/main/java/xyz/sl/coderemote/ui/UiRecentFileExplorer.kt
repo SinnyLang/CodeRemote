@@ -15,7 +15,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import xyz.sl.coderemote.MainActivity
 
 @Composable
 fun UiRecentFileExplorer(
@@ -25,7 +24,7 @@ fun UiRecentFileExplorer(
 ){
     Column {
         recentFileUri.forEach { fileUriItem ->
-            val fileItemName:String = MainActivity.fileManger.getFileNameFromUri(fileUriItem)
+            val fileItemName:String = fileUriItem.lastPathSegment?:"UnknownFile"
             NavigationDrawerItem(
                 label = {
                     Row {

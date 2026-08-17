@@ -62,7 +62,7 @@ import xyz.sl.coderemote.ui.dialog.DangerConfirmDialog
 import xyz.sl.coderemote.ui.dialog.TextInputDialog
 import xyz.sl.coderemote.core.FileNode
 
-var debugTag : String = "ProjectRootActivity"
+const val ProjectRootActivityTag : String = "ProjectRootActivity"
 
 class ProjectRootActivity : ComponentActivity() {
 
@@ -78,12 +78,12 @@ class ProjectRootActivity : ComponentActivity() {
         uri =  Uri.parse(uriStr)
 
         // TODO: avoid uri is null in StartProjectActivity
-        Log.i(debugTag,"uri "+uri.toString())
+        Log.i(ProjectRootActivityTag,"uri "+uri.toString())
 
         // 点击文件列表中的文件触发此函数
         //   如果是文件则更新 currentUri
         val onDrawerFileItemClick = { node: FileNode ->
-            Log.i(debugTag, "onDrawerFileItemClick()->${node.name}")
+            Log.i(ProjectRootActivityTag, "onDrawerFileItemClick()->${node.name}")
             var tmpNode = node
             var relativePath = "/"+tmpNode.name
 
@@ -94,7 +94,6 @@ class ProjectRootActivity : ComponentActivity() {
             }
 
             // 更新当前显示的文件
-//            vm.updateCurrentUri( findFileUri(this, uri, relativePath) ?: Uri.EMPTY )
             vm.updateCurrentUri(node.resource.uri)
         }
 
@@ -114,7 +113,7 @@ class ProjectRootActivity : ComponentActivity() {
                 ).show()
 
                 LaunchedEffect(error) {
-                    Log.e(debugTag, "解析uri失败", error.value)
+                    Log.e(ProjectRootActivityTag, "解析uri失败", error.value)
                     startActivity(
                         Intent(this@ProjectRootActivity, StartProjectActivity::class.java)
                     )
@@ -180,7 +179,7 @@ class ProjectRootViewModel : ViewModel() {
         if (!recentUri.contains(currentUri)) {
             addRecentFile(currentUri)
         }
-        Log.d(Tag, "currentUri: $currentUri")
+        Log.d(ProjectRootActivityTag, "currentUri: $currentUri")
     }
 
     // 最近打开过的文件 Uri
@@ -212,11 +211,6 @@ fun UiProjectRoot(
     onDrawerFileItemClick: (file: FileNode) -> Unit = {},
     vm: ProjectRootViewModel = viewModel()
 ) {
-//    val fileTree by fileTreeViewModel.fileTree.collectAsState()
-//    val fileTreeRoot by fileTreeViewModel.rootNode.collectAsState()
-//    val fileTreeError by fileTreeViewModel.error.collectAsState()
-//    val isFileTreeLoading by fileTreeViewModel.isLoading.collectAsState()
-
     val expandDrawer = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -228,8 +222,6 @@ fun UiProjectRoot(
         OptionItem("保存") {},
         OptionItem("打开") {}
     )
-
-//    val imeBottomDp = with(LocalDensity.current) { WindowInsets.ime.getBottom(this).toDp() }
 
     // 记住 UiEditor 中保存文件的函数
     var saveCurrentFile by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -452,7 +444,7 @@ fun UiProjectRoot(
                     showNewFileDialog = false
                     selectedNode = null
                 } catch (e: Exception) {
-                    Log.e(debugTag, e.message, e)
+                    Log.e(ProjectRootActivityTag, e.message, e)
                 }
             }
         )
@@ -478,7 +470,7 @@ fun UiProjectRoot(
                     selectedNode = null
                 } catch (e: Exception) {
                     // 处理错误
-                    Log.e(debugTag, e.message, e)
+                    Log.e(ProjectRootActivityTag, e.message, e)
                 }
             }
         )

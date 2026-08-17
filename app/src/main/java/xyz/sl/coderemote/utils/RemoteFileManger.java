@@ -80,6 +80,7 @@ public class RemoteFileManger extends BaseFileManager{
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public @NotNull List<? extends @NotNull FileNode> scanDirectory(@NotNull Uri rootUri) {
 //        List<String> filesName = sshClient.listFiles(rootUri.getPath());
         return List.of(FileTreeViewModelKt.sampleFiles());

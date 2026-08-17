@@ -16,8 +16,8 @@ public interface Resource {
     boolean exists();
     boolean delete();
     Resource rename(String newName) throws IOException;
-    InputStream openInputStream() throws IOException;
-    OutputStream openOutputStream() throws IOException;
+    InputStream openInputStream() throws IOException;  // 保证永远不返回 null（失败直接抛异常）
+    OutputStream openOutputStream() throws IOException;// 保证永远不返回 null（失败直接抛异常）
     boolean isDirectory();
     Resource ensureParentDirectory();
 }

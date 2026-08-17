@@ -58,6 +58,7 @@ public abstract class BaseFileManager {
     /**
      * 从 Uri 中获取文件名
      */
+    @Deprecated
     public String getFileNameFromUri(Uri uri){
         String result = "UnKnownFile";
 
@@ -97,6 +98,7 @@ public abstract class BaseFileManager {
         return result; // 未知类型
     }
 
+    @Deprecated
     public File getFile(Uri uri){
         return null;
     }
@@ -134,6 +136,7 @@ public abstract class BaseFileManager {
     }
 
     // ---------- 通用文件属性 ----------
+    @Deprecated
     public static class FileAttributes {
         public final long size;
         public final long lastModified;
@@ -147,16 +150,19 @@ public abstract class BaseFileManager {
     }
 
     // ---------- 抽象方法（子类实现） ----------
+    @Deprecated
     public FileAttributes getAttributes(String path) throws IOException{
         throw new IOException("implement of this method is planning");
     }
     // 可选：创建、删除、重命名
 
     //===========list File===================
+    @Deprecated
     public @NotNull List<? extends @NotNull FileNode> scanDirectory(@NotNull Uri rootUri) {
         return List.of(UriUtils.INSTANCE.uriToFileNode(context, rootUri));
     }
 
+    @Deprecated
     public @NotNull List<? extends @NotNull FileNode> listDirectory(@NotNull Uri rootUri) {
 
 
@@ -289,6 +295,7 @@ public abstract class BaseFileManager {
      * @return 创建的文件Uri
      * @throws IOException 创建失败时抛出
      */
+    @Deprecated
     public Uri createFile(Uri parentUri, String fileName) throws IOException {
         if (context == null) {
             throw new RuntimeException("Code Remote EditFileManger is not initial");
@@ -341,6 +348,7 @@ public abstract class BaseFileManager {
      * @return 创建的目录Uri
      * @throws IOException 创建失败时抛出
      */
+    @Deprecated
     public Uri createDirectory(Uri parentUri, String dirName) throws IOException {
         if (context == null) {
             throw new RuntimeException("Code Remote EditFileManger is not initial");
@@ -392,6 +400,7 @@ public abstract class BaseFileManager {
      * @param uri 文件Uri
      * @throws IOException 删除失败时抛出
      */
+    @Deprecated
     public void deleteFile(Uri uri) throws IOException {
         if (context == null) {
             throw new RuntimeException("Code Remote EditFileManger is not initial");
@@ -429,6 +438,7 @@ public abstract class BaseFileManager {
      * @param uri 目录Uri
      * @throws IOException 删除失败时抛出
      */
+    @Deprecated
     public void deleteDirectory(Uri uri) throws IOException {
         if (context == null) {
             throw new RuntimeException("Code Remote EditFileManger is not initial");
@@ -517,6 +527,7 @@ public abstract class BaseFileManager {
      * @param newName 新文件名
      * @throws IOException 重命名失败时抛出
      */
+    @Deprecated
     public void renameFile(Uri uri, String newName) throws IOException {
         if (context == null) {
             throw new RuntimeException("Code Remote EditFileManger is not initial");
@@ -565,6 +576,7 @@ public abstract class BaseFileManager {
      * @param newName 新目录名
      * @throws IOException 重命名失败时抛出
      */
+    @Deprecated
     public void renameDirectory(Uri uri, String newName) throws IOException {
         // 目录重命名与文件重命名逻辑相同
         renameFile(uri, newName);
@@ -587,6 +599,7 @@ public abstract class BaseFileManager {
     /**
      * 检查目录是否为空
      */
+    @Deprecated
     public boolean isDirectoryEmpty(Uri uri) throws IOException {
         if (uri == null) {
             throw new IllegalArgumentException("Uri cannot be null");
