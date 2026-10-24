@@ -115,6 +115,7 @@ fun UiEditor(
 
     // ---------- 内部状态 ----------
     // 当前已加载并正在编辑的文件 URI（独立于外部传入的 fileUri）
+    // 文件1未加载完成时加载文件2，此时currentFileUri为文件1，fileUri为文件2，程序会取消加载文件1
     var currentFileUri by remember { mutableStateOf<Uri>(Uri.EMPTY) }
     var currentViewModel by remember { mutableStateOf<TextEditorControllerViewModel?>(null) }
     var loadState by remember { mutableStateOf<LoadState>(LoadState.Idle) }
@@ -188,7 +189,8 @@ fun UiEditor(
         loadJob = null
 
         // 3. 开始加载新文件
-        currentFileUri = fileUri  // 更新当前 URI
+        val oldCurrentFileUri = currentFileUri // 保存uri副本，取消job时恢复
+        currentFileUri = fileUri                // 为了更新显示的文件名字
         currentViewModel = null
         loadState = LoadState.Loading
 
@@ -206,7 +208,10 @@ fun UiEditor(
                     onTextChange(text)
                 }
             } catch (e: CancellationException) {
-                // 任务取消，忽略
+                // 任务取消，恢复uri
+                withContext(Dispatchers.Main){
+                    currentFileUri = oldCurrentFileUri
+                }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     if (!isActive) return@withContext
@@ -251,10 +256,10 @@ fun UiEditor(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { /* 撤销 */ }) {
+                    IconButton(onClick = {}) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "撤销")
                     }
-                    IconButton(onClick = { /* 重做 */ }) {
+                    IconButton(onClick = {}) {
                         Icon(Icons.Default.ArrowForward, contentDescription = "撤回“撤销”")
                     }
                     UiTaskMenuButton(tasksData)

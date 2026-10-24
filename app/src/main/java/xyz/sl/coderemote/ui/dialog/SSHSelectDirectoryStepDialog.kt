@@ -54,9 +54,9 @@ fun SSHSelectDirectoryStepDialog(
 ) {
     val coroutineScope = rememberCoroutineScope()
     // 连接参数
-    var host by remember { mutableStateOf("172.16.155.87") }
+    var host by remember { mutableStateOf("192.168.1.12") }
     var port by remember { mutableStateOf("22") }
-    var username by remember { mutableStateOf("jocker") }
+    var username by remember { mutableStateOf("joker") }
     var password by remember { mutableStateOf("123") }
 
     // 连接状态

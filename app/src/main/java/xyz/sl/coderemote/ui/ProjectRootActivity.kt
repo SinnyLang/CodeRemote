@@ -76,8 +76,6 @@ class ProjectRootActivity : ComponentActivity() {
 
         val uriStr = intent.getStringExtra("uri")
         uri =  Uri.parse(uriStr)
-
-        // TODO: avoid uri is null in StartProjectActivity
         Log.i(ProjectRootActivityTag,"uri "+uri.toString())
 
         // 点击文件列表中的文件触发此函数
@@ -106,11 +104,8 @@ class ProjectRootActivity : ComponentActivity() {
             val error = error.collectAsState()
 
             if (error.value != null) {
-                Toast.makeText(
-                    this,
-                    error.toString(),
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(this, error.toString(), Toast.LENGTH_LONG)
+                    .show()
 
                 LaunchedEffect(error) {
                     Log.e(ProjectRootActivityTag, "解析uri失败", error.value)
@@ -121,9 +116,8 @@ class ProjectRootActivity : ComponentActivity() {
                 }
 
             } else if (isLoading.value) {
-                // 显示加载中
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator()     // 显示加载中
                 }
             } else {
                 UiProjectRoot(
@@ -140,10 +134,7 @@ class ProjectRootActivity : ComponentActivity() {
                 val resolved = MainActivity.resourceManager.resolve(uri)
                 val vm = ViewModelProvider(
                     this@ProjectRootActivity,
-                    FileTreeViewModelFactory(
-                        MainActivity.fileManger,
-                        resolved
-                    )
+                    FileTreeViewModelFactory(resolved)
                 ).get(FileTreeViewModel::class.java)
 
                 fileTreeVM = vm
@@ -245,9 +236,6 @@ fun UiProjectRoot(
                     onCloseFileItem = { uri: Uri ->
                         // 如果当前编辑的文件是要移除的文件，先保存
                         //    UiEditor 监听 currentUri 变化，会自动保存文件。这里会重复保存
-//                        if (vm.currentUri == uri) {
-//                            saveCurrentFile?.invoke()
-//                        }
 
                         // 移除文件
                         vm.delRecentFile(uri)
@@ -262,7 +250,6 @@ fun UiProjectRoot(
                             fileTreeViewModel,
                             onClickFileNode = onDrawerFileItemClick,
                             afterClickFileNode = {
-                                // TODO: 点击file item之后，不能成功收起侧边栏
                                 scope.launch {
                                     expandDrawer.close()
                                 }
@@ -306,8 +293,7 @@ fun UiProjectRoot(
             UiOutputPanel(tabTitles = tabs, tabContents = contents,
                 modifier = Modifier
                     .fillMaxWidth()
-//                .align(Alignment.BottomCenter)
-                .zIndex(1f) // 保证浮在上面
+                    .zIndex(1f) // 保证浮在上面
             )
         }
         IconButton(
