@@ -11,7 +11,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 
-import xyz.sl.coderemote.core.FileNode;
+import xyz.sl.coderemote.core.fsm.FileNode;
 import xyz.sl.coderemote.ui.FileTreeViewModelKt;
 
 public class RemoteFileManger extends BaseFileManager{

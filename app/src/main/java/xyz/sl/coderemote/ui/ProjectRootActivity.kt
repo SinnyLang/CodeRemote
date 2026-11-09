@@ -58,9 +58,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import xyz.sl.coderemote.MainActivity
+import xyz.sl.coderemote.core.dataStore
+import xyz.sl.coderemote.core.fsm.DataStoreSessionStore
 import xyz.sl.coderemote.ui.dialog.DangerConfirmDialog
 import xyz.sl.coderemote.ui.dialog.TextInputDialog
-import xyz.sl.coderemote.core.FileNode
+import xyz.sl.coderemote.core.fsm.FileNode
+import xyz.sl.coderemote.core.fsm.ResourceFileOperations
+import xyz.sl.coderemote.core.fsm.ResourceFileRepository
+import xyz.sl.coderemote.core.fsm.SessionStore
 
 const val ProjectRootActivityTag : String = "ProjectRootActivity"
 
@@ -134,7 +139,13 @@ class ProjectRootActivity : ComponentActivity() {
                 val resolved = MainActivity.resourceManager.resolve(uri)
                 val vm = ViewModelProvider(
                     this@ProjectRootActivity,
-                    FileTreeViewModelFactory(resolved)
+                    FileTreeViewModelFactory(
+                        repository = ResourceFileRepository(),
+                        operations = ResourceFileOperations(),
+                        sessionStore = DataStoreSessionStore(applicationContext.dataStore),
+                        rootResource = resolved,
+                        contentLoader = {},
+                    )
                 ).get(FileTreeViewModel::class.java)
 
                 fileTreeVM = vm
@@ -395,10 +406,10 @@ fun UiProjectRoot(
                 try {
                     when (val node = selectedNode) {
                         is FileNode.File -> {
-                            fileTreeViewModel.renameFile(node.resource, newName)
+                            fileTreeViewModel.rename(node, newName)
                         }
                         is FileNode.Directory -> {
-                            fileTreeViewModel.renameFile(node.resource, newName)
+                            fileTreeViewModel.rename(node, newName)
                         }
                         else -> {}
                     }
@@ -426,7 +437,7 @@ fun UiProjectRoot(
             onConfirm = { fileName ->
                 try {
                     val dir = selectedNode as FileNode.Directory
-                    fileTreeViewModel.createFile(dir.resource, fileName)
+                    fileTreeViewModel.createFile(dir, fileName)
                     showNewFileDialog = false
                     selectedNode = null
                 } catch (e: Exception) {
@@ -451,7 +462,7 @@ fun UiProjectRoot(
             onConfirm = { dirName ->
                 try {
                     val dir = selectedNode as FileNode.Directory
-                    fileTreeViewModel.createDirectory(dir.resource, dirName)
+                    fileTreeViewModel.createDirectory(dir, dirName)
                     showNewDirDialog = false
                     selectedNode = null
                 } catch (e: Exception) {
@@ -480,10 +491,10 @@ fun UiProjectRoot(
                 try {
                     when (val node = selectedNode) {
                         is FileNode.File -> {
-                            fileTreeViewModel.deleteNode(node.resource, false)
+                            fileTreeViewModel.delete(node)
                         }
                         is FileNode.Directory -> {
-                            fileTreeViewModel.deleteNode(node.resource, true)
+                            fileTreeViewModel.delete(node)
                         }
                         else -> {}
                     }
@@ -501,10 +512,14 @@ fun UiProjectRoot(
 @Preview(backgroundColor = 0x888888)
 @Composable
 fun PreviewUiProjectRoot() {
-    MainActivity.setEditFileMangerForUiPreview(LocalContext.current)
+    val applicationContext = LocalContext.current.applicationContext
+    MainActivity.setEditFileMangerForUiPreview(applicationContext)
 
-    val sampleData : List<FileNode> = listOf(sampleFiles())
-    val previewData = remember { PreviewFileTreeViewModel(sampleData) }
+    val previewData = remember {
+        PreviewFileTreeViewModel(
+            sessionStore = applicationContext.dataStore as SessionStore
+        )
+    }
 
     UiProjectRoot(previewData)
 }

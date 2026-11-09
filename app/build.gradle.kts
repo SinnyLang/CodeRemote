@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("de.undercouch.download") version "5.5.0"
+    kotlin("plugin.serialization") version "2.2.0"
 }
 
 // 读取 local.properties
@@ -77,6 +78,8 @@ android {
 dependencies {
     implementation(libs.jsch)
     implementation(libs.termlib)
+    implementation(libs.commons.pool2)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(project(":piecetable"))
     implementation(libs.androidx.datastore.preferences)

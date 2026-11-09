@@ -24,11 +24,12 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import xyz.sl.coderemote.core.FileNode;
+import xyz.sl.coderemote.core.fsm.FileNode;
 
 /**
  * BaseFileManager 提供对本地文件的列出、读、写、增、删、重命名操作
  */
+@Deprecated
 public abstract class BaseFileManager {
     protected final Context context;
     protected final File cacheDir;

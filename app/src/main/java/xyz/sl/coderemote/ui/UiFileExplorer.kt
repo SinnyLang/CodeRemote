@@ -7,18 +7,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.paddingFromBaseline
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.InsertDriveFile
@@ -28,23 +24,33 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import xyz.sl.coderemote.MainActivity
-import xyz.sl.coderemote.core.FileNode
+import xyz.sl.coderemote.core.dataStore
+import xyz.sl.coderemote.core.fsm.DataStoreSessionStore
+import xyz.sl.coderemote.core.fsm.FileNode
+import xyz.sl.coderemote.core.fsm.LoadStatus
 import xyz.sl.coderemote.utils.LocalFileManger
 import kotlin.collections.listOf
 
 fun doNothing(){}
+
+val inComposePreview: Boolean
+    @Composable
+    @ReadOnlyComposable
+    get() = LocalInspectionMode.current
 
 /**
  * 显示文件树
@@ -64,75 +70,53 @@ fun UiFileTreeView(
 ) {
 
 
-    // rootNodes 是一个根节点列表，用于处理多个根目录情况
-    val rootNodes by fileTreeViewModel.rootNode.collectAsState()
-    val isLoading by fileTreeViewModel.isLoading.collectAsState()
-    val error by fileTreeViewModel.error.collectAsState()
+    val root = fileTreeViewModel.root
+    val rootStatus by root.loadStatus.collectAsState()
 
     val modifier = Modifier
 
     when {
-        // 初始化文件树--显示加载中
-        isLoading && rootNodes.isEmpty() -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
+        // 首次加载：根还没有任何 children
+        root.children == null && rootStatus is LoadStatus.Loading -> {
+            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         }
-        // 文件数加载失败--显示重试
-        error != null && rootNodes.isEmpty() -> {
+
+        // 首次加载失败
+        root.children == null && rootStatus is LoadStatus.Failed -> {
+            val err = (rootStatus as LoadStatus.Failed).error
             Column(
                 modifier = modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Center,
             ) {
-                Text("加载失败: $error", color = MaterialTheme.colorScheme.error)
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { fileTreeViewModel.refresh() }) {
-                    Text("重试")
-                }
+                Text("加载失败: ${err.message}", color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(16.dp))
+                Button(onClick = { fileTreeViewModel.retryLoad(root) }) { Text("重试") }
             }
         }
-        // 文件树成功加载--渲染文件树
-        rootNodes.isNotEmpty() -> {
+
+        // 未加载但没在加载、也没失败（极短暂状态，先给个转圈）
+        root.children == null && rootStatus is LoadStatus.NotLoaded -> {
+            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+
+        // 有数据（含刷新中保留旧数据）
+        else -> {
             FileTreeNodeView(
-                nodes = rootNodes,
+                nodes = listOf(root),
                 viewModel = fileTreeViewModel,
                 modifier = modifier,
                 depth = 0,
                 onClickFileNode = onClickFileNode,
                 afterClickFileNode = afterClickFileNode,
-                onLongClickNode = onLongClickNode
+                onLongClickNode = onLongClickNode,
             )
         }
     }
-
-//    Column (
-//        modifier = Modifier.fillMaxWidth()
-//    ) {
-//        rootNodes.forEach { node ->
-//            when (node) {
-//                is FileNode.File ->
-//                    UiFileExplorerItemOfFile(node, indent, onClickFileNode, afterClickFileNode, onLongClickNode)
-//
-//                is FileNode.Directory -> {
-//                    UiFileExplorerItemOfDirectory(node, indent, onLongClick = onLongClickNode)
-//                    if (node.isExpanded.collectAsState().value) {
-//                        UiFileTreeView(
-////                            node.getChildren(),
-//                            listOf(),
-//                            indent + 1,
-//                            onFileClick,
-//                            afterFileClick,
-//                            onLongClick
-//                        )
-//                    }
-//                }
-//            }
-//        }
-//    }
 
 }
 
@@ -183,12 +167,12 @@ fun DirectoryItemView(
     afterClickFileNode: () -> Unit,
     onLongClickNode: (FileNode) -> Unit
 ) {
-    val isExpanded = directory.isExpanded.collectAsState()
-    val isLoading = directory.isLoading.collectAsState()
-    val children = if (isExpanded.value) directory.getCachedChildren() else emptyList()
+    val isExpanded by directory.isExpanded.collectAsState()
+    val loadStatus by directory.loadStatus.collectAsState()
+    val isLoading = loadStatus is LoadStatus.Loading
 
     Column(modifier = modifier) {
-        // 目录项
+        // 目录行
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -202,10 +186,7 @@ fun DirectoryItemView(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                if (isExpanded.value)
-                    Icons.Default.FolderOpen
-                else
-                    Icons.Default.Folder,
+                if (isExpanded) Icons.Default.FolderOpen else Icons.Default.Folder,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -219,48 +200,64 @@ fun DirectoryItemView(
                 overflow = TextOverflow.Ellipsis,
                 lineHeight = 15.sp
             )
-            if (isLoading.value) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp
-                )
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
             }
         }
 
         // 子节点
-        if (isExpanded.value) {
-            if (isLoading.value && children.isEmpty()) {
-//                Box(
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-//                        .padding(start = (depth + 1) * 16.dp)
-//                        .padding(8.dp),
-//                    contentAlignment = Alignment.Center
-//                ) {
-//                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
-//                }
-            } else if (children.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = (depth + 1) * 10.dp)
-                        .padding(4.dp)
-                ) {
-                    Text(
-                        text = "空目录",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+        if (isExpanded) {
+            when {
+                // 展开但还没拿到数据，正在加载
+                directory.children == null && isLoading -> {
+                    // 目录行已有转圈，这里可以留空
+                }
+
+                // 展开但加载失败
+                directory.children == null && loadStatus is LoadStatus.Failed -> {
+                    val err = (loadStatus as LoadStatus.Failed).error
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = (depth + 1) * 10.dp)
+                            .padding(4.dp),
+                    ) {
+                        Text(
+                            text = "加载失败：${err.message}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+
+                // 真正加载完成且为空
+                directory.children?.isEmpty() == true -> {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = (depth + 1) * 10.dp)
+                            .padding(4.dp),
+                    ) {
+                        Text(
+                            text = "空目录",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                // 有子节点（刷新中仍保留旧数据，能正常渲染）
+                directory.children != null -> {
+                    FileTreeNodeView(
+                        nodes = directory.children!!,
+                        viewModel = viewModel,
+                        depth = depth + 1,
+                        onClickFileNode = onClickFileNode,
+                        afterClickFileNode = afterClickFileNode,
+                        onLongClickNode = onLongClickNode,
                     )
                 }
-            } else {
-                FileTreeNodeView(
-                    nodes = children,
-                    viewModel = viewModel,
-                    depth = depth + 1,
-                    onClickFileNode = onClickFileNode,
-                    afterClickFileNode = afterClickFileNode,
-                    onLongClickNode = onLongClickNode
-                )
+
             }
         }
     }
@@ -282,9 +279,7 @@ fun FileItemView(
             .padding(start = (depth * 10).dp)
             .combinedClickable(
                 onClick = { onClickFileNode(file); afterClickFileNode() },
-                onLongClick = {
-                    onLongClickNode(file)
-                },
+                onLongClick = { onLongClickNode(file) }
             )
             .padding(vertical = 1.dp, horizontal = 1.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -304,7 +299,9 @@ fun FileItemView(
             overflow = TextOverflow.Ellipsis,
             lineHeight = 15.sp
         )
-        if (file.resource.size > 0) {
+
+        // size >= 0 视为已知；未知大小（例如 -1）不显示
+        if (file.resource.size >= 0) {
             Text(
                 text = formatFileSize(file.resource.size),
                 style = MaterialTheme.typography.bodySmall,
@@ -323,84 +320,17 @@ fun formatFileSize(size: Long): String {
     }
 }
 
-@Composable
-fun UiFileExplorerItemOfFile(
-    file: FileNode,
-    indent: Int,
-    onFileClick: (file: FileNode) -> Unit,
-    afterFileClick: () -> Unit = {},
-    onLongClick: (FileNode) -> Unit = {}
-){
-    Row (
-        modifier = Modifier
-            .padding(horizontal = (indent * 16).dp, vertical = 4.dp)
-            .fillMaxSize()
-            .height(20.dp)
-            .combinedClickable(
-                onClick = {
-                    onFileClick(file)
-                    afterFileClick()
-                },
-                onLongClick = {
-                    onLongClick(file)
-                }
-            )
-    ) {
-        Spacer(modifier = Modifier.width(4.dp))
-        Icon(Icons.Default.InsertDriveFile, contentDescription = "")
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(file.name, Modifier
-            .fillMaxHeight()
-            .paddingFromBaseline(15.dp))
-    }
-}
-
-@Composable
-fun UiFileExplorerItemOfDirectory(
-    dir: FileNode.Directory,
-    indent: Int,
-    onLongClick: (FileNode) -> Unit = {}
-){
-    Row (
-        modifier = Modifier
-            .padding(horizontal = (indent * 16).dp, vertical = 4.dp)
-            .fillMaxWidth()
-            .height(20.dp)
-            .combinedClickable(
-                onClick = {
-                    dir.toggleExpanded()
-                    Log.i("UiFileExplorer", "expand dir " + dir.name)
-                },
-                onLongClick = {
-                    onLongClick(dir)
-                }
-            )
-    ) {
-        val icon =
-            if (dir.isExpanded.collectAsState().value)
-                Icons.Default.ExpandMore
-            else
-                Icons.Default.ChevronRight
-        Icon(imageVector = icon, contentDescription = "expend/collapse")
-        Icon(Icons.Default.Folder, contentDescription = "folder")
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(dir.name, Modifier
-            .fillMaxHeight()
-            .paddingFromBaseline(15.dp))
-    }
-}
-
 @Preview
 @Composable
 fun PreviewUiFileExplorer() {
+    val applicationContext = LocalContext.current.applicationContext
 
-
-    val sampleData = listOf(
-        sampleFiles()
-    )
-
-    MainActivity.setFileManger(LocalFileManger(LocalContext.current.applicationContext))
-    val previewData = remember { PreviewFileTreeViewModel(sampleData) }
+    MainActivity.setFileManger(LocalFileManger(applicationContext))
+    val previewData = remember {
+        PreviewFileTreeViewModel(
+            sessionStore = DataStoreSessionStore(applicationContext.dataStore)
+        )
+    }
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {

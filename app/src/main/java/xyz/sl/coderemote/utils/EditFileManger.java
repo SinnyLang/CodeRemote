@@ -24,7 +24,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import xyz.sl.coderemote.core.FileNode;
+import xyz.sl.coderemote.core.fsm.FileNode;
 
 public class EditFileManger {
     // EditFileManger 的生命周期与 ApplicationContext 相同

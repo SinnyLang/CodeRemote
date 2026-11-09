@@ -5,7 +5,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import xyz.sl.coderemote.MainActivity
-import xyz.sl.coderemote.core.FileNode
+import xyz.sl.coderemote.core.fsm.FileNode
 
 object UriUtils {
     val debugTag = "UriUtils"
@@ -55,10 +55,10 @@ object UriUtils {
     fun documentFileToNode(file: DocumentFile, parent: FileNode?, context: Context): FileNode {
         return if (file.isDirectory) {
             val dir = FileNode.Directory(
+                "",
                 file.name?:"Unnamed",
                 parent as? FileNode.Directory,
-                MainActivity.resourceManager.resolve(file.uri),
-                { listOf() }
+                MainActivity.resourceManager.resolve(file.uri)
             )
             val childrenNodes = file.listFiles().map {
                 documentFileToNode(it, dir, context)
@@ -66,7 +66,7 @@ object UriUtils {
             dir.setChildren( childrenNodes )
             dir
         } else {
-            FileNode.File(file.name ?: "Unnamed", parent as? FileNode.Directory, MainActivity.resourceManager.resolve(file.uri))
+            FileNode.File("", file.name ?: "Unnamed", parent as? FileNode.Directory, MainActivity.resourceManager.resolve(file.uri))
         }
     }
 }

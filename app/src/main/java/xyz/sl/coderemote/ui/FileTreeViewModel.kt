@@ -5,13 +5,22 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import xyz.sl.coderemote.core.FileNode
+import xyz.sl.coderemote.core.fsm.FileNode
+import xyz.sl.coderemote.core.fsm.FileNodeOperations
+import xyz.sl.coderemote.core.fsm.FileRepository
+import xyz.sl.coderemote.core.fsm.FileTree
+import xyz.sl.coderemote.core.fsm.OpenFileManager
+import xyz.sl.coderemote.core.fsm.ResourceFileOperations
+import xyz.sl.coderemote.core.fsm.SessionData
+import xyz.sl.coderemote.core.fsm.SessionStore
 import xyz.sl.coderemote.core.vfs.DirectoryResource
 import xyz.sl.coderemote.core.vfs.LocalResource
 import xyz.sl.coderemote.core.vfs.Resource
@@ -19,279 +28,211 @@ import xyz.sl.coderemote.core.vfs.Resource
 /**
  * FileTreeViewModel - 将 Resource 文件映射成 FileNode，供 UI 使用
  */
+// todo: 构建 File Status Manager （FSM）
+//  doing:解构 FileNode FileTree FileTreeviewModel 作用
+//  next: 编写 OpenFileManager.kt
 open class FileTreeViewModel(
-    private val rootResource : Resource
+    private val repository: FileRepository,
+    private val operations: FileNodeOperations,
+    private val sessionStore: SessionStore,
+    private val rootResource : Resource,
+    private val contentLoader: suspend (FileNode.File) -> Any,
 ) : ViewModel() {
 
-    /**
-     *  预览专用设置方法：直接设置数据，不执行真实加载
-     */
-    fun setPreviewData(nodes: List<FileNode>) {
-        _isLoading.value = false
-        _error.value = null
-    }
-
+    @Deprecated("")
     val _rootNode = MutableStateFlow<List<FileNode>>(emptyList())
+    @Deprecated("")
     val rootNode: StateFlow<List<FileNode>> = _rootNode.asStateFlow()
 
     // 加载状态
+    @Deprecated("")
     val _isLoading = MutableStateFlow(false)
+    @Deprecated("")
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     // 错误信息
+    @Deprecated("")
     val _error = MutableStateFlow<String?>(null)
+    @Deprecated("")
     val error: StateFlow<String?> = _error.asStateFlow()
 
+
+
+    val workspaceKey: String = repository.normalizeKey(rootResource.uri.toString())
+
+    var root: FileNode.Directory = FileNode.Directory(
+        key = workspaceKey,
+        name = rootResource.name ?: "Root",
+        resource = rootResource,
+        parent = null,
+    )
+
+    private val fileTree = FileTree(repository, operations)
+    val openFileManager = OpenFileManager(viewModelScope, contentLoader)
+
+    private val _commandError = MutableStateFlow<String?>(null)
+    val commandError: StateFlow<String?> = _commandError.asStateFlow()
+
     init {
-        loadRootDirectory()
+         viewModelScope.launch {
+             fileTree.loadChildren(root)
+//             restoreSession()
+         }
+        // startAutoSave()
     }
 
-    open fun loadRootDirectory(){
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            try {
-                val root = withContext(Dispatchers.IO) {
-                    createRootNode(rootResource)
-                }
-                _rootNode.value = listOf(root)
-            } catch (e: Exception) {
-                _error.value = e.message
-            } finally {
-                _isLoading.value = false
-            }
+    // ---------- 会话恢复 ----------
+    private suspend fun restoreSession() {
+        val saved = sessionStore.load(workspaceKey)
+        if (saved == null || saved.rootKey != workspaceKey) {
+            runCatching { fileTree.loadChildren(root) }
+                .onFailure { _commandError.value = it.message }
+            return
         }
-    }
-
-    /**
-     * 创建根节点（包含加载子节点的逻辑）
-     */
-    private suspend fun createRootNode(rootResource: Resource): FileNode.Directory {
-        val name = rootResource.name ?: "Root"
-
-        // 定义加载子节点的函数
-        val loadChildren: suspend (FileNode.Directory) -> List<FileNode> = { directory ->
-            withContext(Dispatchers.IO) {
-                val resourceList = (rootResource as DirectoryResource).list()
-                resourceList.map { entry ->
-                    when(entry.isDirectory){
-                        true -> createDirectoryNode(entry, directory)
-                        false -> createFileNode(entry, directory)
-                    }
-                }
-            }
-        }
-
-        return FileNode.Directory(
-            name = name,
-            parent = null,
-            resource = rootResource,
-            loadChildren = loadChildren
+        runCatching { fileTree.restoreExpanded(root, saved.expandedKeys) }
+            .onFailure { _commandError.value = it.message }
+        openFileManager.restore(
+            OpenFileManager.Snapshot(saved.openFiles, saved.activeFile),
+            resolve = ::findFile,
         )
     }
-
-    /** 创建目录节点
-     */
-    private fun createDirectoryNode(
-        cNode: Resource,
-        parent: FileNode.Directory
-    ): FileNode.Directory {
-        val loadChildren: suspend (FileNode.Directory) -> List<FileNode> = { directory ->
-            withContext(Dispatchers.IO) {
-                val resourceList = (cNode as DirectoryResource).list()
-                resourceList.map { entry ->
-                    when(entry.isDirectory){
-                        true -> createDirectoryNode(entry, directory)
-                        false -> createFileNode(entry, directory)
-                    }
-                }
+    private fun findFile(key: String): FileNode.File? {
+        if (key == root.key) return null
+        val stack = ArrayDeque<FileNode>()
+        stack.addLast(root)
+        while (stack.isNotEmpty()) {
+            when (val cur = stack.removeLast()) {
+                is FileNode.File -> if (cur.key == key) return cur
+                is FileNode.Directory -> cur.children.orEmpty().forEach { stack.addLast(it) }
             }
         }
-
-        return FileNode.Directory(
-            name = cNode.name,
-            parent = parent,
-            resource = cNode,
-            loadChildren = loadChildren
-        )
+        return null
     }
 
-    /**
-     * 创建文件节点
-     */
-    private fun createFileNode(
-        cNode: Resource,
-        parent: FileNode.Directory
-    ): FileNode.File {
-        return FileNode.File(
-            name = cNode.name,
-            parent = parent,
-            resource = cNode,
-        )
-    }
-
-    // 刷新文件树
-    @Deprecated("use reloadFileTree()")
-    open fun refresh() {
-//        loadFileTree()
-//        loadRootDirectory()
-    }
-    // 重新加载文件树
-    open fun reloadFileTree(){
-        loadRootDirectory()
-    }
-
-
-    // 创建文件
-    open fun createFile(pResource: Resource, fileName: String): Result<Uri> {
-        return try {
-            val newFile = (pResource as DirectoryResource).createFile(fileName)
-            // 创建成功后刷新树
-            loadRootDirectory()
-            Result.success(newFile.uri)
-        } catch (e: Exception) {
-            _error.value = e.message
-            Result.failure(e)
-        }
-    }
-
-    // 创建目录
-    open fun createDirectory(pResource: Resource, dirName: String): Result<Uri> {
-        return try {
-            val newDir = (pResource as DirectoryResource).createDirectory(dirName)
-            // 创建成功后刷新树
-            loadRootDirectory()
-            Result.success(newDir.uri)
-        } catch (e: Exception) {
-            _error.value = e.message
-            Result.failure(e)
-        }
-    }
-
-    // 重命名
-    open fun renameFile(resource: Resource, newName: String): Result<Unit> {
-        return try {
-            resource.rename(newName)
-            loadRootDirectory()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            _error.value = e.message
-            Result.failure(e)
-        }
-    }
-
-    // 删除
-    open fun deleteNode(resource: Resource, isDirectory: Boolean): Result<Unit> {
-        return try {
-            if (isDirectory) {
-                resource.delete()
-            } else {
-                resource.delete()
-            }
-            loadRootDirectory()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            _error.value = e.message
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * 展开/关闭文件夹
-     */
-    fun toggleDirectory(directory: FileNode.Directory) {
-        if (directory.isExpanded.value == false){
-            // 1.加载子文件
+    // ---------- UI 命令 ----------
+    fun toggleDirectory(dir: FileNode.Directory) {
+        if (dir.isExpanded.value) {
+            fileTree.collapse(dir)
+        } else {
             viewModelScope.launch {
-                _isLoading.value = true
-                _error.value = null
-                try {
-                    directory.getCachedChildren()
-                    directory.reload()
-                } catch (e: Exception) {
-                    _error.value = e.message
-                } finally {
-                    _isLoading.value = false
-                }
+                runCatching { fileTree.expand(dir) }
+                    .onFailure { _commandError.value = it.message }
             }
         }
+    }
 
-        // 2.切换展开状态
-        directory.toggleExpanded()
+    fun openFile(file: FileNode.File) = openFileManager.open(file)
+
+    fun retryLoad(dir: FileNode.Directory) = viewModelScope.launch {
+        runCatching { fileTree.reload(dir) }
+            .onFailure { _commandError.value = it.message }
+    }
+
+    fun createFile(parent: FileNode.Directory, name: String) = viewModelScope.launch {
+        runCatching { fileTree.createFile(parent, name) }
+            .onFailure { _commandError.value = it.message }
+    }
+
+    fun createDirectory(parent: FileNode.Directory, name: String) = viewModelScope.launch {
+        runCatching { fileTree.createDirectory(parent, name) }
+            .onFailure { _commandError.value = it.message }
+    }
+
+    fun rename(node: FileNode, newName: String) = viewModelScope.launch {
+        runCatching { fileTree.rename(node, newName) }
+            .onFailure { _commandError.value = it.message }
+    }
+
+    fun delete(node: FileNode) = viewModelScope.launch {
+        runCatching { fileTree.delete(node) }
+            .onFailure { _commandError.value = it.message }
+    }
+
+    fun consumeCommandError() { _commandError.value = null }
+
+    // ---------- 自动保存 ----------
+    @OptIn(FlowPreview::class)
+    private fun startAutoSave() {
+        viewModelScope.launch {
+            merge(fileTree.changes, openFileManager.changes)
+                .debounce(500)
+                .collect { persistSession() }
+        }
+    }
+
+    private suspend fun persistSession() {
+        val snap = openFileManager.snapshot()
+        sessionStore.save(
+            workspaceKey,
+            SessionData(
+                rootKey = workspaceKey,
+                expandedKeys = fileTree.expandedKeysSnapshot(root).toList(),
+                openFiles = snap.openKeys,
+                activeFile = snap.activeKey,
+            ),
+        )
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        openFileManager.shutdown()
+    }
+
+
+    /** 命令统一入口：捕获异常、成功后刷新父目录 */
+    private fun runCommand(block: suspend () -> Unit): Result<Unit> {
+        return try {
+            viewModelScope.launch {
+                runCatching { block() }.onFailure { _commandError.value = it.message }
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            _commandError.value = e.message
+            Result.failure(e)
+        }
     }
 }
 
 class FileTreeViewModelFactory(
-    private val rootResource : Resource
+    private val repository: FileRepository,
+    private val operations: FileNodeOperations,
+    private val sessionStore: SessionStore,
+    private val rootResource: Resource,
+    private val contentLoader: suspend (FileNode.File) -> Any,
 ) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(FileTreeViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return FileTreeViewModel(rootResource = rootResource) as T
+        require(modelClass.isAssignableFrom(FileTreeViewModel::class.java)) {
+            "Unknown ViewModel class: ${modelClass.name}"
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
+        return FileTreeViewModel(
+            repository, operations, sessionStore, rootResource, contentLoader,
+        ) as T
     }
 }
 
 /** 预览专用的 ViewModel
  *  该类应对：预览时不支持动态创建 ViewModel
  */
+class FakeRepository() : FileRepository {
+    override suspend fun list(dir: FileNode.Directory) = dir.children.orEmpty()
+    override fun normalizeKey(uri: String) = uri
+}
+
 class PreviewFileTreeViewModel(
-    private val mockData: List<FileNode> =
-        listOf(FileNode.Directory(
-            "AA",
-            null,
-            LocalResource.emptyLocalResource(),
-            {listOf()})
-        )
+    private val mockData: FileNode = sampleFiles(),
+    private val sessionStore: SessionStore
 ) : FileTreeViewModel(
-    rootResource = LocalResource.emptyLocalResource()
-) {
+    repository = FakeRepository(),
+    operations = ResourceFileOperations(),
+    sessionStore = sessionStore,
+    rootResource = mockData.resource,
+    contentLoader = { file ->
+        withContext(Dispatchers.IO) {  }
+    },) {
+
     init {
-        // 初始化时直接设置模拟数据
-        _rootNode.value = mockData
-        _isLoading.value = false
-        _error.value = null
-    }
-
-    // 覆盖加载方法，不执行任何 I/O 操作
-    fun loadFileTree() {
-        // 预览模式不执行任何操作
-        _isLoading.value = false
-    }
-
-    override fun loadRootDirectory() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            try {
-                _rootNode.value
-            } catch (e: Exception) {
-                _error.value = e.message
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    override fun refresh() {
-        // 预览模式不执行任何操作
-    }
-
-    override fun createFile(pResource: Resource, fileName: String): Result<Uri> {
-        return Result.success(Uri.EMPTY)
-    }
-
-    override fun createDirectory(pResource: Resource, dirName: String): Result<Uri> {
-        return Result.success(Uri.EMPTY)
-    }
-
-    override fun renameFile(resource: Resource, newName: String): Result<Unit> {
-        return Result.success(Unit)
-    }
-
-    override fun deleteNode(resource: Resource, isDirectory: Boolean): Result<Unit> {
-        return Result.success(Unit)
+        root = mockData as FileNode.Directory
     }
 }
 
@@ -299,28 +240,26 @@ class PreviewFileTreeViewModel(
  *  预览使用的数据
  */
 fun sampleFiles(): FileNode.Directory {
+    // root
+    //  |- src
+    //  |   |- main
+    //  |   |   |- MainActivity.kt
+    //  |   |   |- Utils.kt
+    //  |   |- test
+    //  |   |- readme
     val resource = LocalResource.emptyLocalResource()
 
-    val MainActivity = FileNode.File("MainActivity.kt", null, resource)
-    val Utils = FileNode.File("Utils.kt", null, resource)
-    val mainLoadChild: suspend (FileNode.Directory) -> List<FileNode> = { directory ->
-        delay(2000)
-        listOf(MainActivity, Utils)
-    }
+    val MainActivity = FileNode.File("","MainActivity.kt", null, resource)
+    val Utils = FileNode.File("","Utils.kt", null, resource)
 
-    val readme = FileNode.File("README.md", null, resource)
-    val main = FileNode.Directory("main", null, resource, mainLoadChild)
+    val readme = FileNode.File("","README.md", null, resource)
+    val main = FileNode.Directory("","main", null, resource)
+    val test = FileNode.Directory("","test", null, resource)
 
-    val testLoadChild: suspend (FileNode.Directory) -> List<FileNode> = { directory ->
-        delay(1000)
-        listOf()
-    }
-    val test = FileNode.Directory("test", null, resource, testLoadChild)
+    val src = FileNode.Directory("","src", null, resource)
 
-    val srcLoadChild: suspend (FileNode.Directory) -> List<FileNode> = { directory ->
-        delay(1000)
-        listOf(main, test, readme)
-    }
-    val src = FileNode.Directory("src", null, resource, srcLoadChild)
+    src.children = listOf(main, test, readme)
+    main.children= listOf(MainActivity, Utils)
+
     return src
 }

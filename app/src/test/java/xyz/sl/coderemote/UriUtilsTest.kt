@@ -6,7 +6,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import xyz.sl.coderemote.core.FileNode
+import xyz.sl.coderemote.core.fsm.FileNode
 import xyz.sl.coderemote.utils.UriUtils.documentFileToNode
 import java.nio.file.Paths
 
